@@ -501,10 +501,17 @@ sub _getMixableProperties {
     $client = $client->master;
 
     my ($trackId, $artist, $title, $duration, $tracks);
+    my $pos = 0;
 
     # Get last count*2 tracks from queue
     foreach (reverse @{ Slim::Player::Playlist::playList($client) } ) {
         ($artist, $title, $duration, $trackId) = Slim::Plugin::DontStopTheMusic::Plugin->getMixablePropertiesFromTrack($client, $_);
+
+        # We reverse the queue (to get last N tracks) so need to check if 1st item in this list is radio
+        if ($pos==0 && !$duration) {
+            main::INFOLOG && $log->info("Found radio station last in the queue - don't start a mix.");
+        }
+        $pos++;
 
         next unless defined $artist && defined $title;
 
@@ -514,7 +521,7 @@ sub _getMixableProperties {
         }
     }
 
-    if ($tracks && ref $tracks && scalar @$tracks && $duration) {
+    if ($tracks && ref $tracks && scalar @$tracks) {
         main::INFOLOG && $log->info("Auto-mixing from random tracks in current playlist");
 
         if ($count && scalar @$tracks > $count) {
@@ -524,11 +531,7 @@ sub _getMixableProperties {
 
         return $tracks;
     } elsif (main::INFOLOG && $log->is_info) {
-        if (!$duration) {
-            main::INFOLOG && $log->info("Found radio station last in the queue - don't start a mix.");
-        } else {
-            main::INFOLOG && $log->info("No mixable items found in current playlist!");
-        }
+        main::INFOLOG && $log->info("No mixable items found in current playlist!");
     }
 
     return;
