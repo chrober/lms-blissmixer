@@ -1,6 +1,7 @@
 0.9.1
 -----
 1. Fix detecting of radio station as last iten in queue.
+2. Use min/max duration to filter seed tracks.
 
 0.9.0
 -----

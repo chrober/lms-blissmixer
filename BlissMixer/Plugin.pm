@@ -500,8 +500,13 @@ sub _getMixableProperties {
 
     $client = $client->master;
 
-    my ($trackId, $artist, $title, $duration, $tracks);
+    my ($trackId, $artist, $title, $duration);
+    my $tracks = ();
+    my $durationFilteredTracks = ();
     my $pos = 0;
+    my $minDuration = int($prefs->get('min_duration') || 0);
+    my $maxDuration = int($prefs->get('max_duration') || 0);
+    my $minCount = $count && $count>4 ? $count-2 : $count;
 
     # Get last count*2 tracks from queue
     foreach (reverse @{ Slim::Player::Playlist::playList($client) } ) {
@@ -515,13 +520,28 @@ sub _getMixableProperties {
 
         next unless defined $artist && defined $title;
 
+        if ((0!=$minDuration && $duration<$minDuration) || (0!=$maxDuration && $duration>$maxDuration)) {
+            push @$durationFilteredTracks, $trackId;
+            next;
+        }
+
         push @$tracks, $trackId;
         if ($count && scalar @$tracks > ($count * 2)) {
             last;
         }
     }
 
-    if ($tracks && ref $tracks && scalar @$tracks) {
+    # Too few tracks? Add some that were filtered due to duration
+    if ($minCount && scalar @$tracks < $minCount && scalar @$durationFilteredTracks) {
+        foreach my $trackId (@$durationFilteredTracks) {
+            push @$tracks, $trackId;
+            if (scalar @$tracks >= $minCount) {
+                last;
+            }
+        }
+    }
+
+    if (scalar @$tracks) {
         main::INFOLOG && $log->info("Auto-mixing from random tracks in current playlist");
 
         if ($count && scalar @$tracks > $count) {
