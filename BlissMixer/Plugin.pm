@@ -96,6 +96,7 @@ sub initPlugin {
         max_bpm_diff     => 0,
         use_track_genre  => 0,
         use_forest       => 1,
+        use_dynamic_weights => 0,
         run_analyser_after_scan => 0,
         analysis_read_tags => 0,
         analysis_write_tags => 0,
@@ -1169,6 +1170,7 @@ sub _getMixData {
                         norepart    => int($prefs->get('no_repeat_artist')),
                         norepalb    => int($prefs->get('no_repeat_album')),
                         forest      => int($prefs->get('use_forest') || 0),
+                        dynamicweights => int($prefs->get('use_dynamic_weights') || 0),
                         genregroups => _genreGroups(),
                         allgenres   => int($prefs->get('match_all_genres') || 0)
                     });
