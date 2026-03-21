@@ -106,6 +106,10 @@
         <input type="checkbox" name="pref_use_forest" id="use_forest" [% IF prefs.use_forest %] checked [% END %] value="1"/>
         [% END %]
 
+        [% WRAPPER settingGroup title="BLISSMIXER_USE_DYNAMIC_WEIGHTS" desc="BLISSMIXER_USE_DYNAMIC_WEIGHTS_DESC" %]
+        <input type="checkbox" name="pref_use_dynamic_weights" id="use_dynamic_weights" [% IF prefs.use_dynamic_weights %] checked [% END %] value="1"/>
+        [% END %]
+
         <br/><hr style="opacity:0.4" class="sub-sep"/><br/>
         <b style="font-size:120%">[% "GENRES" | string %]</b><br/><br/>
         <div style="opacity:0.6">[% "BLISSMIXER_GENRE_NOTE" | string %]</div><br/>
