@@ -1050,8 +1050,8 @@ sub _dstmMix {
                                     # Sum per-feature weights within each metric group
                                     my $tempo_sum  = $w{Tempo} // 0;
                                     my $timbre_sum = 0;
-                                    $timbre_sum += ($w{$_} // 0) for qw(Zcr MeanSpecCentroid StdDevSpecCentroid MeanSpecRolloff StdDevSpecRolloff MeanSpecFlatness StdDevSpecFlatness);
-                                    my $loudness_sum = ($w{MeanLoudness} // 0) + ($w{StdDevLoudness} // 0);
+                                    $timbre_sum += ($w{$_} // 0) for qw(Zcr MeanSpectralCentroid StdDeviationSpectralCentroid MeanSpectralRolloff StdDeviationSpectralRolloff MeanSpectralFlatness StdDeviationSpectralFlatness);
+                                    my $loudness_sum = ($w{MeanLoudness} // 0) + ($w{StdDeviationLoudness} // 0);
                                     my $chroma_sum = 0;
                                     $chroma_sum += ($w{"Chroma$_"} // 0) for 1..13;
 
