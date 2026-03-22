@@ -44,7 +44,7 @@ def checkVersion(version):
 
 
 def releaseUrl(version, osname):
-    return "https://github.com/CDrummond/%s/releases/download/%s/%s-%s-%s.zip" % (PLUGIN_GIT_NAME, version, PLUGIN_GIT_NAME, osname, version)
+    return "https://github.com/chrober/%s/releases/download/%s/%s-%s-%s.zip" % (PLUGIN_GIT_NAME, version, PLUGIN_GIT_NAME, osname, version)
 
 
 def checkVersionExists(version, osname):
