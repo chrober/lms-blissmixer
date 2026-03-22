@@ -163,7 +163,7 @@ BLISSMIXER_MIX_ALGORITHM
 	EN	Mixing algorithm
 
 BLISSMIXER_MIX_ALGORITHM_DESC
-	EN	Choose how tracks are selected for similarity matching.
+	EN	Static: finds similar tracks based on the four metric weight sliders (Tempo, Timbre, Loudness, Chroma). Best when you know which audio characteristics matter most. Extended isolation forest: trains a statistical model on the seed tracks and scores candidates by how well they fit the pattern. No manual tuning needed; requires at least 4 seeds. Dynamic weighting: automatically discovers which characteristics the seed tracks have in common and emphasises those when searching. Adapts to each set of seeds.
 
 BLISSMIXER_ALG_STATIC
 	EN	Metric weightings (static)
@@ -173,6 +173,12 @@ BLISSMIXER_ALG_FOREST
 
 BLISSMIXER_ALG_DYNAMIC
 	EN	Dynamic weighting
+
+BLISSMIXER_NUM_SEED_TRACKS
+	EN	Number of seed tracks (dynamic weighting)
+
+BLISSMIXER_NUM_SEED_TRACKS_DESC
+	EN	How many recent tracks to use as seeds for the dynamic weighting algorithm. Fewer seeds give sharper, more focused weights. More seeds capture broader context but produce blurrier weights. Default: 5.
 
 BLISSMIXER_USE_TRACK_GENRE
 	EN	Use track genre

@@ -97,6 +97,7 @@ sub initPlugin {
         use_track_genre  => 0,
         use_forest       => 1,
         use_dynamic_weights => 0,
+        num_seed_tracks  => 5,
         run_analyser_after_scan => 0,
         analysis_read_tags => 0,
         analysis_write_tags => 0,
@@ -998,7 +999,9 @@ sub _dstmMix {
     main::DEBUGLOG && $log->debug("Get tracks");
     my $useForest = $prefs->get('use_forest') || 0;
     my $useDynamicWeights = $prefs->get('use_dynamic_weights') || 0;
-    my $numSeedTracks = ($useForest && !$useDynamicWeights) ? NUM_FOREST_SEED_TRACKS : NUM_SEED_TRACKS;
+    my $numSeedTracks = $useDynamicWeights
+        ? ($prefs->get('num_seed_tracks') || 5)
+        : ($useForest ? NUM_FOREST_SEED_TRACKS : NUM_SEED_TRACKS);
     my $seedTracks = _getMixableProperties($client, $numSeedTracks); # Slim::Plugin::DontStopTheMusic::Plugin->getMixableProperties($client, NUM_SEED_TRACKS);
 
     # don't seed from radio stations - only do if we're playing from some track based source
@@ -1055,12 +1058,12 @@ sub _dstmMix {
                                     my $chroma_sum = 0;
                                     $chroma_sum += ($w{"Chroma$_"} // 0) for 1..13;
 
-                                    # Normalize to 0-100 scale (same as static weight sliders)
+                                    # Normalize to 1-100 scale (same range as static weight sliders)
                                     my $total = $tempo_sum + $timbre_sum + $loudness_sum + $chroma_sum;
                                     if ($total > 0) {
-                                        my $t = 100.0 / $total;
-                                        $log->debug(sprintf("Dynamic weights - metric groups (0-100): Tempo=%.1f  Timbre=%.1f  Loudness=%.1f  Chroma=%.1f  (static: %d/%d/%d/%d)",
-                                            $tempo_sum * $t, $timbre_sum * $t, $loudness_sum * $t, $chroma_sum * $t,
+                                        my $t = 96.0 / $total;  # 4 groups × 1 minimum + 96 proportional = 100
+                                        $log->debug(sprintf("Dynamic weights - metric groups (1-100): Tempo=%.1f  Timbre=%.1f  Loudness=%.1f  Chroma=%.1f  (static: %d/%d/%d/%d)",
+                                            1 + $tempo_sum * $t, 1 + $timbre_sum * $t, 1 + $loudness_sum * $t, 1 + $chroma_sum * $t,
                                             int($prefs->get('weight_tempo') || 4), int($prefs->get('weight_timbre') || 30),
                                             int($prefs->get('weight_loudness') || 9), int($prefs->get('weight_chroma') || 57)));
                                     }

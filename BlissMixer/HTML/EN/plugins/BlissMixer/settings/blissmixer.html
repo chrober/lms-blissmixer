@@ -110,6 +110,10 @@
         <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="dynamic" [% IF prefs.use_dynamic_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_DYNAMIC" | string %]</label>
         [% END %]
 
+        [% WRAPPER settingGroup title="BLISSMIXER_NUM_SEED_TRACKS" desc="BLISSMIXER_NUM_SEED_TRACKS_DESC" %]
+        <input type="number" min="2" max="25" class="stdedit" name="pref_num_seed_tracks" id="num_seed_tracks" value="[% prefs.num_seed_tracks %]" size="5">
+        [% END %]
+
         <br/><hr style="opacity:0.4" class="sub-sep"/><br/>
         <b style="font-size:120%">[% "GENRES" | string %]</b><br/><br/>
         <div style="opacity:0.6">[% "BLISSMIXER_GENRE_NOTE" | string %]</div><br/>
