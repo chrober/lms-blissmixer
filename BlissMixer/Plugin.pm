@@ -1181,7 +1181,8 @@ sub _getMixData {
                         forest      => int($prefs->get('use_forest') || 0),
                         dynamicweights => int($prefs->get('use_dynamic_weights') || 0),
                         genregroups => _genreGroups(),
-                        allgenres   => int($prefs->get('match_all_genres') || 0)
+                        allgenres   => int($prefs->get('match_all_genres') || 0),
+                        main::DEBUGLOG ? (debug => 1) : ()
                     });
     main::DEBUGLOG && $log->debug("Request $jsonData");
     return $jsonData;
