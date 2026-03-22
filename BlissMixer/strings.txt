@@ -159,17 +159,20 @@ BLISSMIXER_MAX_BPM_DIFF
 BLISSMIXER_MAX_BPM_DIFF_DESC
 	EN	Maximum difference between BPM of seed track and candidate tracks. Set to 0 for no maximum.
 
-BLISSMIXER_USE_FOREST
+BLISSMIXER_MIX_ALGORITHM
+	EN	Mixing algorithm
+
+BLISSMIXER_MIX_ALGORITHM_DESC
+	EN	Choose how tracks are selected for similarity matching.
+
+BLISSMIXER_ALG_STATIC
+	EN	Metric weightings (static)
+
+BLISSMIXER_ALG_FOREST
 	EN	Extended isolation forest
 
-BLISSMIXER_USE_FOREST_DESC
-	EN	When using more 4 (or more) seed tracks, use <a href="https://en.wikipedia.org/wiki/Isolation_forest" target="_blank">extended isolation forest</a> to locate similar tracks to the seeds.
-
-BLISSMIXER_USE_DYNAMIC_WEIGHTS
+BLISSMIXER_ALG_DYNAMIC
 	EN	Dynamic weighting
-
-BLISSMIXER_USE_DYNAMIC_WEIGHTS_DESC
-	EN	Dynamically weight audio features based on seed similarity. With multiple seeds, features that the seeds share (low variance) are weighted higher. With a single seed, uses a pre-trained weight matrix if available, otherwise falls back to static weights.
 
 BLISSMIXER_USE_TRACK_GENRE
 	EN	Use track genre

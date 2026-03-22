@@ -1038,11 +1038,61 @@ sub _dstmMix {
                     my $response = shift;
                     main::DEBUGLOG && $log->debug("Received API response");
 
-                    # Log dynamic weights debug info if returned by bliss-mixer
+                    # Analyse and log dynamic weights debug info if returned by bliss-mixer
                     if (main::DEBUGLOG) {
                         my $debugHeader = $response->headers->header('X-Bliss-Debug');
                         if ($debugHeader) {
-                            $log->debug("BlissMixer dynamic weights: " . $debugHeader);
+                            eval {
+                                my $dbg = from_json($debugHeader);
+                                if ($dbg->{weights} && ref($dbg->{weights}) eq 'ARRAY') {
+                                    my %w = map { $_->{feature} => $_->{weight} } @{$dbg->{weights}};
+
+                                    # Sum per-feature weights within each metric group
+                                    my $tempo_sum  = $w{Tempo} // 0;
+                                    my $timbre_sum = 0;
+                                    $timbre_sum += ($w{$_} // 0) for qw(Zcr MeanSpecCentroid StdDevSpecCentroid MeanSpecRolloff StdDevSpecRolloff MeanSpecFlatness StdDevSpecFlatness);
+                                    my $loudness_sum = ($w{MeanLoudness} // 0) + ($w{StdDevLoudness} // 0);
+                                    my $chroma_sum = 0;
+                                    $chroma_sum += ($w{"Chroma$_"} // 0) for 1..13;
+
+                                    # Normalize to 0-100 scale (same as static weight sliders)
+                                    my $total = $tempo_sum + $timbre_sum + $loudness_sum + $chroma_sum;
+                                    if ($total > 0) {
+                                        my $t = 100.0 / $total;
+                                        $log->debug(sprintf("Dynamic weights - metric groups (0-100): Tempo=%.1f  Timbre=%.1f  Loudness=%.1f  Chroma=%.1f  (static: %d/%d/%d/%d)",
+                                            $tempo_sum * $t, $timbre_sum * $t, $loudness_sum * $t, $chroma_sum * $t,
+                                            int($prefs->get('weight_tempo') || 4), int($prefs->get('weight_timbre') || 30),
+                                            int($prefs->get('weight_loudness') || 9), int($prefs->get('weight_chroma') || 57)));
+                                    }
+
+                                    # Sort features by weight to find strongest/weakest seed similarities
+                                    my @sorted = sort { $b->{weight} <=> $a->{weight} } @{$dbg->{weights}};
+                                    my @top3    = @sorted[0..2];
+                                    my @bottom3 = @sorted[-3..-1];
+
+                                    $log->debug("Strongest seed similarities (highest weight): "
+                                        . join(", ", map { sprintf("%s=%.2f", $_->{feature}, $_->{weight}) } @top3));
+                                    $log->debug("Weakest seed similarities (lowest weight): "
+                                        . join(", ", map { sprintf("%s=%.2f", $_->{feature}, $_->{weight}) } @bottom3));
+                                }
+
+                                if ($dbg->{stats}) {
+                                    my $s = $dbg->{stats};
+                                    $log->debug(sprintf("Stats: %d tracks in DB, %d scored, %d usable (discarded: dur=%d bpm=%d genre=%d xmas=%d album=%d; filtered: artist=%d album=%d title=%d)",
+                                        $s->{db_total}, $s->{scored}, $s->{usable},
+                                        $s->{discarded_duration}, $s->{discarded_bpm}, $s->{discarded_genre}, $s->{discarded_xmas}, $s->{discarded_album},
+                                        $s->{filtered_artist}, $s->{filtered_album}, $s->{filtered_title}));
+                                }
+
+                                if ($dbg->{timing_ms}) {
+                                    my $t = $dbg->{timing_ms};
+                                    $log->debug(sprintf("Timing: %dms total (db=%dms calc=%dms sort=%dms filter=%dms)",
+                                        $t->{total}, $t->{db_load}, $t->{distance_calc}, $t->{sort}, $t->{filter}));
+                                }
+                            };
+                            if ($@) {
+                                $log->debug("Failed to parse debug header: $@");
+                            }
                         }
                     }
 
