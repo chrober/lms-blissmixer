@@ -102,12 +102,12 @@
         <input type="number" min="2" max="20" class="stdedit" name="pref_dstm_tracks" id="dstm_tracks" value="[% prefs.dstm_tracks %]" size="5">
         [% END %]
 
-        [% WRAPPER settingGroup title="BLISSMIXER_USE_FOREST" desc="BLISSMIXER_USE_FOREST_DESC" %]
-        <input type="checkbox" name="pref_use_forest" id="use_forest" [% IF prefs.use_forest %] checked [% END %] value="1"/>
-        [% END %]
-
-        [% WRAPPER settingGroup title="BLISSMIXER_USE_DYNAMIC_WEIGHTS" desc="BLISSMIXER_USE_DYNAMIC_WEIGHTS_DESC" %]
-        <input type="checkbox" name="pref_use_dynamic_weights" id="use_dynamic_weights" [% IF prefs.use_dynamic_weights %] checked [% END %] value="1"/>
+        [% WRAPPER settingGroup title="BLISSMIXER_MIX_ALGORITHM" desc="BLISSMIXER_MIX_ALGORITHM_DESC" %]
+        <input type="hidden" name="pref_use_forest" id="use_forest" value="[% IF prefs.use_forest %]1[% ELSE %]0[% END %]"/>
+        <input type="hidden" name="pref_use_dynamic_weights" id="use_dynamic_weights" value="[% IF prefs.use_dynamic_weights %]1[% ELSE %]0[% END %]"/>
+        <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="static" [% IF !prefs.use_forest && !prefs.use_dynamic_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_STATIC" | string %]</label>
+        <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="forest" [% IF prefs.use_forest && !prefs.use_dynamic_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_FOREST" | string %]</label>
+        <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="dynamic" [% IF prefs.use_dynamic_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_DYNAMIC" | string %]</label>
         [% END %]
 
         <br/><hr style="opacity:0.4" class="sub-sep"/><br/>
@@ -329,6 +329,14 @@
                     window.localStorage.setItem("bliss-mixer::"+id, show);
                 }
             } catch (e)  { }
+        }
+    }
+
+    function updateMixAlgorithm() {
+        let selected = document.querySelector('input[name="mix_algorithm"]:checked');
+        if (selected) {
+            document.getElementById('use_forest').value = selected.value === 'forest' ? '1' : '0';
+            document.getElementById('use_dynamic_weights').value = selected.value === 'dynamic' ? '1' : '0';
         }
     }
 
