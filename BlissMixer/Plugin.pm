@@ -997,7 +997,8 @@ sub _dstmMix {
 
     main::DEBUGLOG && $log->debug("Get tracks");
     my $useForest = $prefs->get('use_forest') || 0;
-    my $numSeedTracks = $useForest ? NUM_FOREST_SEED_TRACKS : NUM_SEED_TRACKS;
+    my $useDynamicWeights = $prefs->get('use_dynamic_weights') || 0;
+    my $numSeedTracks = ($useForest && !$useDynamicWeights) ? NUM_FOREST_SEED_TRACKS : NUM_SEED_TRACKS;
     my $seedTracks = _getMixableProperties($client, $numSeedTracks); # Slim::Plugin::DontStopTheMusic::Plugin->getMixableProperties($client, NUM_SEED_TRACKS);
 
     # don't seed from radio stations - only do if we're playing from some track based source
@@ -1036,6 +1037,14 @@ sub _dstmMix {
                 sub {
                     my $response = shift;
                     main::DEBUGLOG && $log->debug("Received API response");
+
+                    # Log dynamic weights debug info if returned by bliss-mixer
+                    if (main::DEBUGLOG) {
+                        my $debugHeader = $response->headers->header('X-Bliss-Debug');
+                        if ($debugHeader) {
+                            $log->debug("BlissMixer dynamic weights: " . $debugHeader);
+                        }
+                    }
 
                     my @songs = split(/\n/, $response->content);
                     my $count = scalar @songs;
