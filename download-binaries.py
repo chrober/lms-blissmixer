@@ -7,11 +7,11 @@
 # MIT license.
 #
 
-import datetime, hashlib, os, requests, shutil, subprocess, sys, tempfile, time
+import datetime, hashlib, os, requests, shutil, subprocess, sys, tempfile, time, zipfile
 
 PLUGIN_NAME = "BlissMixer"
 GITHUB_TOKEN_FILE = "%s/.config/github-token" % os.path.expanduser('~')
-MIXER_GITHUB_REPO = "CDrummond/bliss-mixer"
+MIXER_GITHUB_REPO = "chrober/bliss-mixer"
 MIXER_GITHUB_ARTIFACTS = {"bliss-mixer-linux-x86": {"bliss-mixer": "x86_64-linux/bliss-mixer"},
                           "bliss-mixer-linux-arm": {"bin/bliss-mixer-armhf": "armhf-linux/bliss-mixer", "bin/bliss-mixer-aarch64": "aarch64-linux/bliss-mixer"},
                           "bliss-mixer-mac":       {"bliss-mixer": "mac/bliss-mixer"},
@@ -56,7 +56,7 @@ def get_items(repo, artifacts):
     items={}
     for a in js["artifacts"]:
         if a["name"] in artifacts and (not a["name"] in items or to_time(a["created_at"])>items[a["name"]]["date"]):
-            items[a["name"]]={"date":to_time(a["created_at"]), "url":a["archive_download_url"]}
+            items[a["name"]]={"date":to_time(a["created_at"]), "url":a["archive_download_url"], "id": a["id"]}
 
     return items
 
@@ -74,14 +74,52 @@ def getMd5sum(path):
     return md5.hexdigest()
 
 
+def download_with_gh(repo, artifact_id, dest):
+    """Download artifact using gh CLI as fallback."""
+    try:
+        result = subprocess.run(
+            ["gh", "api", "-H", "Accept: application/vnd.github+json",
+             "repos/%s/actions/artifacts/%s/zip" % (repo, artifact_id)],
+            capture_output=True, timeout=120)
+        if result.returncode == 0 and len(result.stdout) > 0:
+            with open(dest, 'wb') as f:
+                f.write(result.stdout)
+            return True
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return False
+
+
+def download_with_token(url, headers, dest):
+    """Download artifact using requests + token."""
+    try:
+        r = requests.get(url, headers=headers, stream=True)
+        if r.status_code == 200:
+            with open(dest, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=1024*1024):
+                    if chunk:
+                        f.write(chunk)
+            # Verify it's a valid zip
+            if os.path.exists(dest) and os.path.getsize(dest) > 0:
+                try:
+                    zipfile.ZipFile(dest, 'r').close()
+                    return True
+                except zipfile.BadZipFile:
+                    pass
+    except Exception:
+        pass
+    return False
+
+
 def download_artifacts(repo, artifacts):
     items = get_items(repo, artifacts)
     if len(items)!=len(artifacts):
         error("Failed to determine all artifacts (%d != %d)" % (len(items), len(artifacts)))
     token = None
-    with open(GITHUB_TOKEN_FILE, "r") as f:
-        token = f.readlines()[0].strip()
-    headers = {"Authorization": "token %s" % token};
+    if os.path.exists(GITHUB_TOKEN_FILE):
+        with open(GITHUB_TOKEN_FILE, "r") as f:
+            token = f.readlines()[0].strip()
+    headers = {"Authorization": "token %s" % token} if token else {}
     ok = True
     updated = False
 
@@ -89,18 +127,22 @@ def download_artifacts(repo, artifacts):
         with tempfile.TemporaryDirectory() as td:
             artifact = artifacts[name]
             url = items[name]["url"]
-            info("Downloading %s" % url)
-            r = requests.get(url, headers=headers, stream=True)
+            artifact_id = items[name]["id"]
             dest = os.path.join(td, name+".zip")
-            with open(dest, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=1024*1024): 
-                    if chunk:
-                        f.write(chunk)
-            if not os.path.exists(dest):
-                info("Failed to download %s" % url)
+
+            # Try requests first, fall back to gh CLI
+            info("Downloading %s" % name)
+            downloaded = download_with_token(url, headers, dest)
+            if not downloaded:
+                info("Token download failed, trying gh CLI...")
+                downloaded = download_with_gh(repo, artifact_id, dest)
+            if not downloaded:
+                info("Failed to download %s" % name)
                 ok = False
                 break
-            subprocess.call(["unzip", dest, "-d", td], shell=False)
+
+            with zipfile.ZipFile(dest, 'r') as zf:
+                zf.extractall(td)
 
             for a in artifact:
                 asrc = "%s/%s" % (td, a)
@@ -108,9 +150,11 @@ def download_artifacts(repo, artifacts):
                 srcMd5 = getMd5sum(asrc)
                 destMd5 = getMd5sum(adest)
                 if srcMd5!=destMd5:
+                    os.makedirs(os.path.dirname(adest), exist_ok=True)
                     info("Moving %s to %s" % (a, adest))
                     shutil.move("%s/%s" % (td, a), adest)
-                    subprocess.call(["chmod", "a+x", adest], shell=False)
+                    if sys.platform != 'win32':
+                        subprocess.call(["chmod", "a+x", adest], shell=False)
                     updated = True
 
     if not ok:
