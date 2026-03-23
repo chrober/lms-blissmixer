@@ -56,7 +56,7 @@ def get_items(repo, artifacts):
     items={}
     for a in js["artifacts"]:
         if a["name"] in artifacts and (not a["name"] in items or to_time(a["created_at"])>items[a["name"]]["date"]):
-            items[a["name"]]={"date":to_time(a["created_at"]), "url":a["archive_download_url"], "id": a["id"]}
+            items[a["name"]]={"date":to_time(a["created_at"]), "url":a["archive_download_url"]}
 
     return items
 
@@ -74,52 +74,14 @@ def getMd5sum(path):
     return md5.hexdigest()
 
 
-def download_with_gh(repo, artifact_id, dest):
-    """Download artifact using gh CLI as fallback."""
-    try:
-        result = subprocess.run(
-            ["gh", "api", "-H", "Accept: application/vnd.github+json",
-             "repos/%s/actions/artifacts/%s/zip" % (repo, artifact_id)],
-            capture_output=True, timeout=120)
-        if result.returncode == 0 and len(result.stdout) > 0:
-            with open(dest, 'wb') as f:
-                f.write(result.stdout)
-            return True
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-    return False
-
-
-def download_with_token(url, headers, dest):
-    """Download artifact using requests + token."""
-    try:
-        r = requests.get(url, headers=headers, stream=True)
-        if r.status_code == 200:
-            with open(dest, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=1024*1024):
-                    if chunk:
-                        f.write(chunk)
-            # Verify it's a valid zip
-            if os.path.exists(dest) and os.path.getsize(dest) > 0:
-                try:
-                    zipfile.ZipFile(dest, 'r').close()
-                    return True
-                except zipfile.BadZipFile:
-                    pass
-    except Exception:
-        pass
-    return False
-
-
 def download_artifacts(repo, artifacts):
     items = get_items(repo, artifacts)
     if len(items)!=len(artifacts):
         error("Failed to determine all artifacts (%d != %d)" % (len(items), len(artifacts)))
     token = None
-    if os.path.exists(GITHUB_TOKEN_FILE):
-        with open(GITHUB_TOKEN_FILE, "r") as f:
-            token = f.readlines()[0].strip()
-    headers = {"Authorization": "token %s" % token} if token else {}
+    with open(GITHUB_TOKEN_FILE, "r") as f:
+        token = f.readlines()[0].strip()
+    headers = {"Authorization": "token %s" % token};
     ok = True
     updated = False
 
@@ -127,17 +89,15 @@ def download_artifacts(repo, artifacts):
         with tempfile.TemporaryDirectory() as td:
             artifact = artifacts[name]
             url = items[name]["url"]
-            artifact_id = items[name]["id"]
+            info("Downloading %s" % url)
+            r = requests.get(url, headers=headers, stream=True)
             dest = os.path.join(td, name+".zip")
-
-            # Try requests first, fall back to gh CLI
-            info("Downloading %s" % name)
-            downloaded = download_with_token(url, headers, dest)
-            if not downloaded:
-                info("Token download failed, trying gh CLI...")
-                downloaded = download_with_gh(repo, artifact_id, dest)
-            if not downloaded:
-                info("Failed to download %s" % name)
+            with open(dest, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=1024*1024):
+                    if chunk:
+                        f.write(chunk)
+            if not os.path.exists(dest):
+                info("Failed to download %s" % url)
                 ok = False
                 break
 
