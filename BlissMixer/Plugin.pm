@@ -97,7 +97,8 @@ sub initPlugin {
         use_track_genre  => 0,
         use_forest       => 1,
         use_dynamic_weights => 0,
-        num_seed_tracks  => 5,
+        num_seed_tracks  => 3,
+        seed_strict_order => 1,
         run_analyser_after_scan => 0,
         analysis_read_tags => 0,
         analysis_write_tags => 0,
@@ -496,21 +497,22 @@ sub _confirmMixerStarted {
 }
 
 sub _getMixableProperties {
-    my ($client, $count) = @_;
+    my ($client, $count, $strict) = @_;
 
     return unless $client;
 
     $client = $client->master;
 
     my ($trackId, $artist, $title, $duration);
-    my $tracks = ();
-    my $durationFilteredTracks = ();
+    my $tracks = [];
+    my $durationFilteredTracks = [];
     my $pos = 0;
     my $minDuration = int($prefs->get('min_duration') || 0);
     my $maxDuration = int($prefs->get('max_duration') || 0);
     my $minCount = $count && $count>4 ? $count-2 : $count;
+    my $collectLimit = $strict ? $count : ($count * 2);
 
-    # Get last count*2 tracks from queue
+    # Get last tracks from queue (strict: exactly count, otherwise count*2)
     foreach (reverse @{ Slim::Player::Playlist::playList($client) } ) {
         ($artist, $title, $duration, $trackId) = Slim::Plugin::DontStopTheMusic::Plugin->getMixablePropertiesFromTrack($client, $_);
 
@@ -528,7 +530,7 @@ sub _getMixableProperties {
         }
 
         push @$tracks, $trackId;
-        if ($count && scalar @$tracks > ($count * 2)) {
+        if ($count && scalar @$tracks >= $collectLimit) {
             last;
         }
     }
@@ -544,7 +546,9 @@ sub _getMixableProperties {
     }
 
     if (scalar @$tracks) {
-        main::INFOLOG && $log->info("Auto-mixing from random tracks in current playlist");
+        main::INFOLOG && $log->info($strict
+            ? "Using last " . scalar(@$tracks) . " tracks from current playlist"
+            : "Auto-mixing from random tracks in current playlist");
 
         if ($count && scalar @$tracks > $count) {
             Slim::Player::Playlist::fischer_yates_shuffle($tracks);
@@ -733,7 +737,7 @@ sub _callApi {
     Slim::Networking::SimpleAsyncHTTP->new(
         sub {
             my $response = shift;
-            main::DEBUGLOG && $log->debug("Received API response ");
+            main::DEBUGLOG && $log->debug("Received API response: " . ($response->headers->header('X-Bliss-Debug') || $response->content));
 
             my @songs = split(/\n/, $response->content);
             my $count = scalar @songs;
@@ -1000,9 +1004,10 @@ sub _dstmMix {
     my $useForest = $prefs->get('use_forest') || 0;
     my $useDynamicWeights = $prefs->get('use_dynamic_weights') || 0;
     my $numSeedTracks = $useDynamicWeights
-        ? ($prefs->get('num_seed_tracks') || 5)
+        ? ($prefs->get('num_seed_tracks') || 3)
         : ($useForest ? NUM_FOREST_SEED_TRACKS : NUM_SEED_TRACKS);
-    my $seedTracks = _getMixableProperties($client, $numSeedTracks); # Slim::Plugin::DontStopTheMusic::Plugin->getMixableProperties($client, NUM_SEED_TRACKS);
+    my $strictSeeds = $useDynamicWeights && ($prefs->get('seed_strict_order') // 1);
+    my $seedTracks = _getMixableProperties($client, $numSeedTracks, $strictSeeds);
 
     # don't seed from radio stations - only do if we're playing from some track based source
     # Get list of valid seeds...
@@ -1039,7 +1044,7 @@ sub _dstmMix {
             Slim::Networking::SimpleAsyncHTTP->new(
                 sub {
                     my $response = shift;
-                    main::DEBUGLOG && $log->debug("Received API response");
+                    main::DEBUGLOG && $log->debug("Received API response: " . ($response->headers->header('X-Bliss-Debug') || $response->content));
 
                     # Analyse and log dynamic weights debug info if returned by bliss-mixer
                     if (main::DEBUGLOG) {
