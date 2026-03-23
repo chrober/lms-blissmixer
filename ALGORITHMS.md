@@ -33,12 +33,12 @@ flowchart LR
     B1 -.->|"linked into"| A
     B2 -.->|"linked into"| MX
 
-    style B1 fill:#dbeafe,stroke:#2563eb
-    style B2 fill:#dbeafe,stroke:#2563eb
-    style DB fill:#fef3c7,stroke:#f59e0b
-    style A fill:#dbeafe,stroke:#2563eb
-    style MX fill:#e0e7ff,stroke:#4f46e5
-    style P fill:#f3e8ff,stroke:#7c3aed
+    style B1 fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style B2 fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style DB fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style A fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style MX fill:#e0e7ff,stroke:#4f46e5,color:#1e2a5f
+    style P fill:#f3e8ff,stroke:#7c3aed,color:#3b1a5f
 ```
 
 ### Where bliss-rs is used
@@ -60,7 +60,8 @@ crate without pulling in heavy native audio libraries it never uses.
 
 | | Static Weights | Extended Isolation Forest | Dynamic Weights |
 |---|---|---|---|
-| **Seed tracks** | 5 | 10 (min 4 required) | 5 |
+| **Seed tracks** | 5 | 10 (min 4 required) | Configurable (default 3, min 2) |
+| **Seed selection** | Random from last 10 in queue | Random from last 20 in queue | Last N from queue (strict order) or random (configurable) |
 | **Candidate search** | KD-tree nearest-neighbour per seed | KD-tree per seed, then pooled | Full database scan |
 | **Distance metric** | Squared Euclidean (user-weighted) | Anomaly score (forest model) | Mahalanobis (variance-weighted), via `bliss-rs` |
 | **Feature weighting** | Manual sliders (Tempo/Timbre/Loudness/Chroma) | None (all features equal) | Automatic from seed variance, via `bliss-rs` `variance_based_weight_matrix()` |
@@ -93,11 +94,11 @@ flowchart TD
     I --> J[Truncate to<br/>requested count]
     J --> K[Return track list]
 
-    style A fill:#e8f4f8,stroke:#2980b9
-    style B fill:#dbeafe,stroke:#2563eb
-    style D fill:#fef3c7,stroke:#f59e0b
-    style F fill:#fce4ec,stroke:#e74c3c
-    style K fill:#e8f5e9,stroke:#27ae60
+    style A fill:#e8f4f8,stroke:#2980b9,color:#1a3a4a
+    style B fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style D fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style F fill:#fce4ec,stroke:#e74c3c,color:#5c1a1a
+    style K fill:#e8f5e9,stroke:#27ae60,color:#1a4a2a
 ```
 
 ### Key characteristics
@@ -132,12 +133,12 @@ flowchart TD
     H --> I[Truncate to<br/>requested count]
     I --> J[Return track list]
 
-    style A fill:#e8f4f8,stroke:#2980b9
-    style B fill:#dbeafe,stroke:#2563eb
-    style E fill:#fef3c7,stroke:#f59e0b
-    style F fill:#fef3c7,stroke:#f59e0b
-    style H fill:#fce4ec,stroke:#e74c3c
-    style J fill:#e8f5e9,stroke:#27ae60
+    style A fill:#e8f4f8,stroke:#2980b9,color:#1a3a4a
+    style B fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style E fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style F fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style H fill:#fce4ec,stroke:#e74c3c,color:#5c1a1a
+    style J fill:#e8f5e9,stroke:#27ae60,color:#1a4a2a
 ```
 
 ### Key characteristics
@@ -161,7 +162,7 @@ they disagree (high variance) are weighted lightly.
 
 ```mermaid
 flowchart TD
-    A[Seed tracks<br/>5 tracks from playlist] --> B["Look up each seed<br/>in bliss.db<br/>(metrics pre-computed by bliss-rs)"]
+    A["Seed tracks<br/>(configurable, default 3)"] --> B["Look up each seed<br/>in bliss.db<br/>(metrics pre-computed by bliss-rs)"]
     B --> C["Collect raw metrics<br/>(unweighted) for all seeds"]
     C --> D{Number of seeds?}
     D -- "≥ 2" --> E["Compute variance per feature<br/>via bliss-rs variance_based_weight_matrix()<br/>weight_i = 1 / (variance_i + ε)<br/>normalise so Σ weights = 23"]
@@ -181,13 +182,13 @@ flowchart TD
     P --> Q[Truncate to<br/>requested count]
     Q --> R[Return track list]
 
-    style A fill:#e8f4f8,stroke:#2980b9
-    style B fill:#dbeafe,stroke:#2563eb
-    style E fill:#fef3c7,stroke:#f59e0b
-    style K fill:#fef3c7,stroke:#f59e0b
-    style J fill:#dbeafe,stroke:#2563eb
-    style M fill:#fce4ec,stroke:#e74c3c
-    style R fill:#e8f5e9,stroke:#27ae60
+    style A fill:#e8f4f8,stroke:#2980b9,color:#1a3a4a
+    style B fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style E fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style K fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style J fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style M fill:#fce4ec,stroke:#e74c3c,color:#5c1a1a
+    style R fill:#e8f5e9,stroke:#27ae60,color:#1a4a2a
 ```
 
 ### Key characteristics
@@ -208,12 +209,43 @@ flowchart TD
 - **Fallback:** With a single seed and no learned matrix, falls back to
   Static Weights.
 
+### Seed selection and count
+
+The number of seed tracks is configurable (default: 3, range: 2–25). This
+affects the trade-off between weight precision and context breadth:
+
+- **Fewer seeds (2–3):** Variance per feature stays low → weights are sharp
+  and opinionated. The algorithm has a strong view of what matters for *these*
+  tracks. Best for a smooth, coherent listening flow.
+- **More seeds (5–10+):** Variance grows → weights flatten toward equal. With
+  diverse enough seeds the algorithm converges to near-uniform weighting,
+  losing its adaptive advantage.
+
+By default, dynamic weighting uses **strict seed order**: the last N tracks
+from the play queue are used as seeds, in order. This is deliberate — it means
+each DSTM trigger bases its search on the tracks that were *just played*,
+producing a natural continuation of the current listening direction.
+
+Static Weights and EIF use a different approach inherited from CDrummond: they
+collect 2× the needed seeds from the queue tail, shuffle them randomly, and
+pick N. While this adds variety, it can cause a **feedback loop** — the same
+tracks keep appearing as seeds across multiple DSTM triggers, the algorithm
+keeps returning the same pool of candidates, and the mix gets stuck in a
+self-reinforcing cycle rather than evolving with the playlist.
+
+Strict seed order breaks this cycle: as new tracks are added and played, the
+seed window slides forward, and the mix naturally follows the direction of the
+most recently played music.
+
+The strict order setting can be disabled in the plugin settings to revert to
+the random selection behaviour if preferred.
+
 ### Example: interpreting the weights
 
-Given seeds of 5 classic rock tracks, the debug log might show:
+Given seeds of 3 classic rock tracks, the debug log might show:
 
 ```
-Dynamic weights - metric groups (0-100): Tempo=0.1  Timbre=25.3  Loudness=1.2  Chroma=73.4
+Dynamic weights - metric groups (1-100): Tempo=1.0  Timbre=25.3  Loudness=2.2  Chroma=71.5
 Strongest seed similarities (highest weight): Chroma9=3.66, Chroma8=3.29, Chroma7=2.67
 Weakest seed similarities (lowest weight): MeanSpectralFlatness=0.11, Chroma11=0.05, Tempo=0.02
 ```
