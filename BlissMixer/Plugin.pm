@@ -1036,6 +1036,30 @@ sub _dstmMix {
             my $previousTracks = _getPreviousTracks($client, $maxNumPrevTracks);
             main::DEBUGLOG && $log->debug("Num tracks to previous: " . ($previousTracks ? scalar(@$previousTracks) : 0));
 
+            # Collect comparison seeds for "what-if" logging (debug only, dynamic weights only)
+            my @staticCompSeeds = ();
+            my @eifCompSeeds = ();
+            if (main::DEBUGLOG && $useDynamicWeights) {
+                my $staticSeedTracks = _getMixableProperties($client, NUM_SEED_TRACKS, 0);
+                if ($staticSeedTracks && ref $staticSeedTracks) {
+                    foreach my $st (@$staticSeedTracks) {
+                        my ($obj) = Slim::Schema->find('Track', $st);
+                        if ($obj && !($obj->path =~ m/^spotify:/ || $obj->path =~ m/^deezer:/ || $obj->path =~ m/^qobuz:/ || $obj->path =~ m/^wimp:/)) {
+                            push @staticCompSeeds, $obj;
+                        }
+                    }
+                }
+                my $eifSeedTracks = _getMixableProperties($client, NUM_FOREST_SEED_TRACKS, 0);
+                if ($eifSeedTracks && ref $eifSeedTracks) {
+                    foreach my $st (@$eifSeedTracks) {
+                        my ($obj) = Slim::Schema->find('Track', $st);
+                        if ($obj && !($obj->path =~ m/^spotify:/ || $obj->path =~ m/^deezer:/ || $obj->path =~ m/^qobuz:/ || $obj->path =~ m/^wimp:/)) {
+                            push @eifCompSeeds, $obj;
+                        }
+                    }
+                }
+            }
+
             my $dstm_tracks = $prefs->get('dstm_tracks') || DEF_NUM_DSTM_TRACKS;
             my $jsonData = _getMixData(\@seedsToUse, $previousTracks ? \@$previousTracks : undef, $dstm_tracks, 1, $filterGenres);
             my $port = $mixerPort || 12000;
@@ -1063,12 +1087,25 @@ sub _dstmMix {
                                     my $chroma_sum = 0;
                                     $chroma_sum += ($w{"Chroma$_"} // 0) for 1..13;
 
-                                    # Normalize to 1-100 scale (same range as static weight sliders)
-                                    my $total = $tempo_sum + $timbre_sum + $loudness_sum + $chroma_sum;
-                                    if ($total > 0) {
-                                        my $t = 96.0 / $total;  # 4 groups × 1 minimum + 96 proportional = 100
-                                        $log->debug(sprintf("Dynamic weights - metric groups (1-100): Tempo=%.1f  Timbre=%.1f  Loudness=%.1f  Chroma=%.1f  (static: %d/%d/%d/%d)",
-                                            1 + $tempo_sum * $t, 1 + $timbre_sum * $t, 1 + $loudness_sum * $t, 1 + $chroma_sum * $t,
+                                    # Compute equivalent static slider values.
+                                    # Static pipeline: slider s -> per-feature w = (s/total*100)/ref -> effective weight w²
+                                    # Dynamic pipeline: per-feature weight W_i -> effective weight W_i
+                                    # Equivalent: w² = avg(W_i for group) -> w = √avg -> s = w * ref
+                                    # Then normalize so sliders sum to 100.
+                                    my $eq_tempo    = sqrt($tempo_sum / 1)  * 4;    # 1 feature,  ref=4
+                                    my $eq_timbre   = sqrt($timbre_sum / 7) * 30;   # 7 features, ref=30
+                                    my $eq_loudness = sqrt($loudness_sum / 2) * 9;  # 2 features, ref=9
+                                    my $eq_chroma   = sqrt($chroma_sum / 13) * 57;  # 13 features, ref=57
+                                    my $eq_total = $eq_tempo + $eq_timbre + $eq_loudness + $eq_chroma;
+                                    if ($eq_total > 0) {
+                                        # Scale to sum=96, then +1 each → sum=100, all values in 1..97
+                                        my $eq_scale = 96.0 / $eq_total;
+                                        $eq_tempo    = 1 + $eq_tempo    * $eq_scale;
+                                        $eq_timbre   = 1 + $eq_timbre   * $eq_scale;
+                                        $eq_loudness = 1 + $eq_loudness * $eq_scale;
+                                        $eq_chroma   = 1 + $eq_chroma   * $eq_scale;
+                                        $log->debug(sprintf("Equivalent static sliders: Tempo=%.0f  Timbre=%.0f  Loudness=%.0f  Chroma=%.0f  (configured: %d/%d/%d/%d)",
+                                            $eq_tempo, $eq_timbre, $eq_loudness, $eq_chroma,
                                             int($prefs->get('weight_tempo') || 4), int($prefs->get('weight_timbre') || 30),
                                             int($prefs->get('weight_loudness') || 9), int($prefs->get('weight_chroma') || 57)));
                                     }
@@ -1113,6 +1150,7 @@ sub _dstmMix {
                         my $trackObj = _pathToTrack($mediaDirs, $songs[$j]);
                         if (blessed $trackObj) {
                             push @$tracks, $trackObj->url;
+                            main::DEBUGLOG && $log->debug("  " . $trackObj->path);
                         } else {
                             $log->error('API attempted to mix in a song at ' . $songs[$j] . ' that can\'t be found at that location');
                         }
@@ -1122,11 +1160,26 @@ sub _dstmMix {
                         _mixFailed($client, $cb, $numSpot);
                     } else {
                         main::DEBUGLOG && $log->debug("Num tracks to use:" . scalar(@$tracks));
-                        foreach my $track (@$tracks) {
-                            main::DEBUGLOG && $log->debug("..." . $track);
-                        }
                         if (scalar @$tracks > 0) {
                             $cb->($client, $tracks);
+
+                            # Fire "what-if" comparison requests (debug only, dynamic weights only)
+                            if (main::DEBUGLOG && $useDynamicWeights) {
+                                my $prevRef = $previousTracks ? \@$previousTracks : undef;
+                                if (scalar @staticCompSeeds > 0) {
+                                    my $staticJson = _buildComparisonJson(\@staticCompSeeds, $prevRef, $dstm_tracks, $filterGenres, 0, 0);
+                                    my $staticDesc = sprintf("static weights (Tempo=%d/Timbre=%d/Loudness=%d/Chroma=%d)",
+                                        int($prefs->get('weight_tempo') || 4), int($prefs->get('weight_timbre') || 30),
+                                        int($prefs->get('weight_loudness') || 9), int($prefs->get('weight_chroma') || 57));
+                                    _fireComparisonRequest($url, $staticDesc, $staticJson);
+                                }
+                                if (scalar @eifCompSeeds >= 4) {
+                                    my $eifJson = _buildComparisonJson(\@eifCompSeeds, $prevRef, $dstm_tracks, $filterGenres, 1, 0);
+                                    _fireComparisonRequest($url, "extended isolation forest", $eifJson);
+                                } else {
+                                    $log->debug('Comparison for "extended isolation forest" skipped (needs >= 4 seeds, have ' . scalar(@eifCompSeeds) . ')');
+                                }
+                            }
                         } else {
                             _mixFailed($client, $cb, $numSpot);
                         }
@@ -1267,6 +1320,73 @@ sub _getListData {
 
     main::DEBUGLOG && $log->debug("Request $jsonData");
     return $jsonData;
+}
+
+# Build a comparison request JSON with explicit forest/dynamicweights overrides
+# (used for "what-if" debug logging when dynamic weights is active)
+sub _buildComparisonJson {
+    my ($seedTracks, $previousTracks, $trackCount, $filterGenres, $forest, $dynamicweights) = @_;
+    my @tracks = ref $seedTracks ? @$seedTracks : ($seedTracks);
+    my @track_paths = ();
+    my @previous_paths = ();
+    my $mediaDirs = Slim::Utils::Misc::getMediaDirs('audio');
+
+    foreach my $track (@tracks) {
+        push @track_paths, _trackToPath($mediaDirs, $track);
+    }
+
+    if ($previousTracks and ref $previousTracks eq 'ARRAY' and scalar @$previousTracks > 0) {
+        foreach my $track (@$previousTracks) {
+            push @previous_paths, _trackToPath($mediaDirs, $track);
+        }
+    }
+
+    my $filterXmas = 1;
+    my $filterXmpsPref = $prefs->get('filter_xmas');
+    if (defined $filterXmpsPref) {
+        $filterXmas = int($filterXmpsPref);
+    }
+
+    return to_json({
+                        count       => int($trackCount),
+                        filtergenre => int($filterGenres),
+                        filterxmas  => $filterXmas,
+                        min         => int($prefs->get('min_duration') || 0),
+                        max         => int($prefs->get('max_duration') || 0),
+                        maxbpmdiff  => int($prefs->get('max_bpm_diff') || 0),
+                        tracks      => [@track_paths],
+                        previous    => [@previous_paths],
+                        shuffle     => 1,
+                        norepart    => int($prefs->get('no_repeat_artist')),
+                        norepalb    => int($prefs->get('no_repeat_album')),
+                        forest      => int($forest),
+                        dynamicweights => int($dynamicweights),
+                        genregroups => _genreGroups(),
+                        allgenres   => int($prefs->get('match_all_genres') || 0),
+                    });
+}
+
+# Fire an async comparison request and log the results (debug only, never affects the queue)
+sub _fireComparisonRequest {
+    my ($url, $strategyName, $jsonData) = @_;
+    Slim::Networking::SimpleAsyncHTTP->new(
+        sub {
+            my $response = shift;
+            my @songs = split(/\n/, $response->content);
+            $log->debug("Mixing strategy \"${strategyName}\" would have chosen:");
+            my $mediaDirs = Slim::Utils::Misc::getMediaDirs('audio');
+            foreach my $song (@songs) {
+                my $trackObj = _pathToTrack($mediaDirs, $song);
+                if (blessed $trackObj) {
+                    $log->debug("  " . $trackObj->path);
+                }
+            }
+        },
+        sub {
+            my $response = shift;
+            $log->debug("Comparison request for \"${strategyName}\" failed: " . $response->error);
+        }
+    )->post($url, 'Content-Type' => 'application/json;charset=utf-8', $jsonData);
 }
 
 my $genreGroups = [];
