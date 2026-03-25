@@ -58,22 +58,113 @@ crate without pulling in heavy native audio libraries it never uses.
 
 ## Comparison
 
-| | Static Weights | Extended Isolation Forest | Dynamic Weights |
-|---|---|---|---|
-| **Seed tracks** | 5 | 10 (min 4 required) | Configurable (default 3, min 2) |
-| **Seed selection** | Random from last 10 in queue | Random from last 20 in queue | Last N from queue (strict order) or random (configurable) |
-| **Candidate search** | KD-tree nearest-neighbour per seed | KD-tree per seed, then pooled | Full database scan |
-| **Distance metric** | Squared Euclidean (user-weighted) | Anomaly score (forest model) | Mahalanobis (variance-weighted), via `bliss-rs` |
-| **Feature weighting** | Manual sliders (Tempo/Timbre/Loudness/Chroma) | None (all features equal) | Automatic from seed variance, via `bliss-rs` `variance_based_weight_matrix()` |
-| **Multi-seed merging** | Per-seed results merged, best sim wins | All candidates scored jointly | Single mean point, all scored jointly |
-| **Artist shuffle** | Yes | No | Yes |
-| **bliss-rs usage** | Feature count (`NUMBER_FEATURES`) | Feature count (`NUMBER_FEATURES`) | `NUMBER_FEATURES`, `AnalysisIndex`, `variance_based_weight_matrix()`, `mahalanobis_distance()` |
-| **Fallback** | — (this is the default) | Falls back to Static if < 4 seeds | Falls back to Static if < 2 seeds or no matrix |
+<table>
+<tr>
+  <th></th>
+  <th>Static Weights</th>
+  <th>Extended Isolation Forest</th>
+  <th>Dynamic Weights</th>
+</tr>
+<tr><th colspan="4" style="background-color:#555; text-align:center; border-width:1px 0px; border-style:solid;">At a glance</th></tr>
+<tr>
+  <td><b>How it works</b></td>
+  <td>You set four sliders to tell the mixer what matters most to you (rhythm, tone, loudness, harmony). It finds songs that are similar according to your preferences.</td>
+  <td>The mixer looks at a batch of recent songs, learns what they have in common, and finds songs that fit the same pattern. You don't configure anything.</td>
+  <td>The mixer looks at what your last few songs share — if they have a similar rhythm but different harmonies, it focuses on rhythm. It figures out what matters <em>for these songs</em> automatically.</td>
+</tr>
+<tr>
+  <td><b>User control</b></td>
+  <td>Full — you decide what "similar" means via sliders</td>
+  <td>None — the algorithm decides everything</td>
+  <td>None — but it adapts to each set of seeds, so it indirectly follows your listening choices</td>
+</tr>
+<tr>
+  <td><b>Best for</b></td>
+  <td>When you know what you want: "give me songs that match <em>this</em> mood, and I care most about harmony"</td>
+  <td>When you want the mixer to figure things out from a larger sample of recent songs</td>
+  <td>When you want an adaptive mix that evolves with what you're listening to, hands-free</td>
+</tr>
+<tr>
+  <td><b>Number of recent songs used</b></td>
+  <td>5</td>
+  <td>10 (at least 4 needed)</td>
+  <td>Configurable (default 3, as few as 2)</td>
+</tr>
+<tr>
+  <td><b>Downsides</b></td>
+  <td>You need to find the right slider positions yourself; wrong settings can give poor results</td>
+  <td>Needs many seed songs; treats all audio characteristics as equally important — can't be nudged</td>
+  <td>With very diverse seeds, it can't find a clear common thread and the weighting becomes bland</td>
+</tr>
+<tr><th colspan="4" style="background-color:#555; text-align:center; border-width:1px 0px; border-style:solid;">Technical details</th></tr>
+<tr>
+  <td><b>Seed tracks</b></td>
+  <td>5</td>
+  <td>10 (min 4 required)</td>
+  <td>Configurable (default 3, min 2)</td>
+</tr>
+<tr>
+  <td><b>Seed selection</b></td>
+  <td>Random from last 10 in queue</td>
+  <td>Random from last 20 in queue</td>
+  <td>Last N from queue (strict order) or random (configurable)</td>
+</tr>
+<tr>
+  <td><b>Candidate search</b></td>
+  <td>KD-tree nearest-neighbour per seed</td>
+  <td>KD-tree per seed, then pooled</td>
+  <td>Full database scan</td>
+</tr>
+<tr>
+  <td><b>Distance metric</b></td>
+  <td>Squared Euclidean (user-weighted)</td>
+  <td>Anomaly score (forest model)</td>
+  <td>Mahalanobis (variance-weighted), via <code>bliss-rs</code></td>
+</tr>
+<tr>
+  <td><b>Feature weighting</b></td>
+  <td>Manual sliders (Tempo/Timbre/Loudness/Chroma)</td>
+  <td>None (all features equal)</td>
+  <td>Automatic from seed variance, via <code>bliss-rs</code> <code>variance_based_weight_matrix()</code></td>
+</tr>
+<tr>
+  <td><b>Multi-seed merging</b></td>
+  <td>Per-seed results merged, best sim wins</td>
+  <td>All candidates scored jointly</td>
+  <td>Single mean point, all scored jointly</td>
+</tr>
+<tr>
+  <td><b>Artist shuffle</b></td>
+  <td>Yes</td>
+  <td>No</td>
+  <td>Yes</td>
+</tr>
+<tr>
+  <td><b>bliss-rs usage</b></td>
+  <td>Feature count (<code>NUMBER_FEATURES</code>)</td>
+  <td>Feature count (<code>NUMBER_FEATURES</code>)</td>
+  <td><code>NUMBER_FEATURES</code>, <code>AnalysisIndex</code>, <code>variance_based_weight_matrix()</code>, <code>mahalanobis_distance()</code></td>
+</tr>
+<tr>
+  <td><b>Fallback</b></td>
+  <td>— (this is the default)</td>
+  <td>Falls back to Static if &lt; 4 seeds</td>
+  <td>Falls back to Static if &lt; 2 seeds or no matrix</td>
+</tr>
+</table>
 
 ## Static Weights (default)
 
 The original algorithm by CDrummond. Each seed independently queries a KD-tree
 for nearest neighbours. Results are merged, filtered, and sorted.
+
+> **In plain English:** You tell the mixer what matters to you by adjusting four
+> sliders: Tempo (how fast/slow), Timbre (the "colour" or texture of the sound),
+> Loudness, and Chroma (harmony and key). The mixer then searches for songs that
+> sound similar to what you've been listening to, focusing more on the aspects
+> you've emphasised. Think of it like telling a record store clerk: "Find me
+> something that *feels* like this, and I care most about the groove and the
+> harmonies, less about loudness." — You stay in control of what "similar" means.
 
 **Weight control:** The user sets four sliders (1–100) for Tempo, Timbre,
 Loudness, and Chroma. These are normalized and expanded into 23 per-feature
@@ -121,6 +212,16 @@ trained on the seed tracks to score all candidate tracks by anomaly score.
 Tracks that fit the seed distribution score low (= normal), tracks that are
 outliers score high (= anomalous).
 
+> **In plain English:** Instead of you telling the mixer what matters, this
+> algorithm figures it out by looking at a larger set of recently played songs
+> (10 instead of 5). It builds a statistical model of "what kind of music is
+> playing right now" and then checks every candidate song against that model.
+> Songs that fit the pattern are considered similar; songs that stick out as
+> unusual are rejected. No sliders to adjust — the algorithm decides on its own
+> what the common thread is. The trade-off: it needs at least 4 seed tracks to
+> work, and it treats all audio characteristics as equally important, so you
+> can't nudge it toward caring more about rhythm vs. harmony.
+
 ```mermaid
 flowchart TD
     A[Seed tracks<br/>10 tracks from playlist<br/>min 4 required] --> B["Look up each seed<br/>in bliss.db<br/>(metrics pre-computed by bliss-rs)"]
@@ -159,6 +260,16 @@ flowchart TD
 Automatically determines feature importance from seed similarity. Features
 where the seeds agree (low variance) are weighted heavily; features where
 they disagree (high variance) are weighted lightly.
+
+> **In plain English:** This algorithm listens to what your recent songs have
+> in common and automatically focuses on those shared qualities when searching
+> for the next track. If your last few songs all have a similar rhythmic feel
+> but very different harmonies, the algorithm concludes "rhythm matters here,
+> harmony doesn't" and finds songs that match the rhythm — without you having
+> to touch any sliders. It adapts to every new set of seeds, so the mix
+> naturally evolves as your listening session progresses. Think of it as a DJ
+> who pays attention to what ties your recent songs together and picks the
+> next track accordingly.
 
 ```mermaid
 flowchart TD
