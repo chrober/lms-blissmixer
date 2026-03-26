@@ -500,13 +500,30 @@ sub _getMixableProperties {
 
     $client = $client->master;
 
-    my ($trackId, $artist, $title, $duration, $tracks);
+    my ($trackId, $artist, $title, $duration);
+    my $tracks = ();
+    my $durationFilteredTracks = ();
+    my $pos = 0;
+    my $minDuration = int($prefs->get('min_duration') || 0);
+    my $maxDuration = int($prefs->get('max_duration') || 0);
+    my $minCount = $count && $count>4 ? $count-2 : $count;
 
     # Get last count*2 tracks from queue
     foreach (reverse @{ Slim::Player::Playlist::playList($client) } ) {
         ($artist, $title, $duration, $trackId) = Slim::Plugin::DontStopTheMusic::Plugin->getMixablePropertiesFromTrack($client, $_);
 
+        # We reverse the queue (to get last N tracks) so need to check if 1st item in this list is radio
+        if ($pos==0 && !$duration) {
+            main::INFOLOG && $log->info("Found radio station last in the queue - don't start a mix.");
+        }
+        $pos++;
+
         next unless defined $artist && defined $title;
+
+        if ((0!=$minDuration && $duration<$minDuration) || (0!=$maxDuration && $duration>$maxDuration)) {
+            push @$durationFilteredTracks, $trackId;
+            next;
+        }
 
         push @$tracks, $trackId;
         if ($count && scalar @$tracks > ($count * 2)) {
@@ -514,7 +531,17 @@ sub _getMixableProperties {
         }
     }
 
-    if ($tracks && ref $tracks && scalar @$tracks && $duration) {
+    # Too few tracks? Add some that were filtered due to duration
+    if ($minCount && scalar @$tracks < $minCount && scalar @$durationFilteredTracks) {
+        foreach my $trackId (@$durationFilteredTracks) {
+            push @$tracks, $trackId;
+            if (scalar @$tracks >= $minCount) {
+                last;
+            }
+        }
+    }
+
+    if (scalar @$tracks) {
         main::INFOLOG && $log->info("Auto-mixing from random tracks in current playlist");
 
         if ($count && scalar @$tracks > $count) {
@@ -524,11 +551,7 @@ sub _getMixableProperties {
 
         return $tracks;
     } elsif (main::INFOLOG && $log->is_info) {
-        if (!$duration) {
-            main::INFOLOG && $log->info("Found radio station last in the queue - don't start a mix.");
-        } else {
-            main::INFOLOG && $log->info("No mixable items found in current playlist!");
-        }
+        main::INFOLOG && $log->info("No mixable items found in current playlist!");
     }
 
     return;
