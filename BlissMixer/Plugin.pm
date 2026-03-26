@@ -100,6 +100,7 @@ sub initPlugin {
         use_dynamic_weights => 0,
         num_seed_tracks  => 3,
         seed_strict_order => 1,
+        learned_blend    => 50,
         run_analyser_after_scan => 0,
         analysis_read_tags => 0,
         analysis_write_tags => 0,
@@ -1317,6 +1318,7 @@ sub _getMixData {
                         norepalb    => int($prefs->get('no_repeat_album')),
                         forest      => int($prefs->get('use_forest') || 0),
                         dynamicweights => int($prefs->get('use_dynamic_weights') || 0),
+                        learnedblend => int($prefs->get('learned_blend') || 50),
                         genregroups => _genreGroups(),
                         allgenres   => int($prefs->get('match_all_genres') || 0),
                         main::DEBUGLOG ? (debug => 1) : ()
