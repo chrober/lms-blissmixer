@@ -302,3 +302,45 @@ BLISSMIXER_MATCH_ALL_GENRES
 
 BLISSMIXER_MATCH_ALL_GENRES_DESC
 	EN	When checking if a track is in a genre group check all of the track's genres are in the group (if this option is enabled), otherwise check that any of the track's genres are in a group. e.g. if you have a group "Metal;Rock;Vocal" then if this option is set then a track with "Hard Rock;Vocal" would not match. If this option is not set then it would.
+
+BLISSMIXER_LEARNING_SECTION
+	EN	Metric Learning
+
+BLISSMIXER_LEARNING_NOTE
+	EN	Train BlissMixer to match your personal sense of music similarity. Take the survey to provide training data, then run the learning process to generate a custom distance matrix. The matrix is used by the dynamic weighting algorithm when only one seed track is available.
+
+BLISSMIXER_LEARNER_NOT_FOUND
+	EN	Metric learning requires the bliss-learner binary, which was not found on this system. You can download it from <a href="https://github.com/CDrummond/bliss-analyser/releases" target="_blank">releases</a>.
+
+BLISSMIXER_SURVEY_LINK
+	EN	Open Similarity Survey
+
+BLISSMIXER_SURVEY_TRIPLETS
+	EN	Training triplets:
+
+BLISSMIXER_RUN_LEARNING_BUTTON
+	EN	Run Learning
+
+BLISSMIXER_STOP_LEARNING_BUTTON
+	EN	Stop Learning
+
+BLISSMIXER_CLEAR_TRIPLETS_BUTTON
+	EN	Clear Training Data
+
+BLISSMIXER_MATRIX_STATUS
+	EN	Learned matrix:
+
+BLISSMIXER_MATRIX_EXISTS
+	EN	Available
+
+BLISSMIXER_MATRIX_NOT_EXISTS
+	EN	Not yet generated
+
+BLISSMIXER_LEARNING_START_TIME
+	EN	Start:
+
+BLISSMIXER_LEARNING_DURATION
+	EN	Duration:
+
+BLISSMIXER_LEARNING_STATUS
+	EN	Status:

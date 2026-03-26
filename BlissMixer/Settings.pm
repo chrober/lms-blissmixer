@@ -59,6 +59,21 @@ sub beforeRender {
     $paramRef->{'clear_failures_text'} = string('BLISSMIXER_ANALYSE_CLEAR_FAILURES_BUTTON');
     my $analyserBinary = Slim::Utils::Misc::findbin('bliss-analyser');
     $paramRef->{'no_analyser_binary'} = !$analyserBinary;
+    # Metric learning survey
+    $paramRef->{'survey_url'} = '/blissmixer/survey.html';
+    $paramRef->{'survey_link_text'} = string('BLISSMIXER_SURVEY_LINK');
+    $paramRef->{'survey_triplets_text'} = string('BLISSMIXER_SURVEY_TRIPLETS');
+    $paramRef->{'run_learning_text'} = string('BLISSMIXER_RUN_LEARNING_BUTTON');
+    $paramRef->{'stop_learning_text'} = string('BLISSMIXER_STOP_LEARNING_BUTTON');
+    $paramRef->{'clear_triplets_text'} = string('BLISSMIXER_CLEAR_TRIPLETS_BUTTON');
+    $paramRef->{'matrix_status_text'} = string('BLISSMIXER_MATRIX_STATUS');
+    $paramRef->{'matrix_available_text'} = string('BLISSMIXER_MATRIX_EXISTS');
+    $paramRef->{'matrix_not_available_text'} = string('BLISSMIXER_MATRIX_NOT_EXISTS');
+    $paramRef->{'learning_start_text'} = string('BLISSMIXER_LEARNING_START_TIME');
+    $paramRef->{'learning_duration_text'} = string('BLISSMIXER_LEARNING_DURATION');
+    $paramRef->{'learning_status_text'} = string('BLISSMIXER_LEARNING_STATUS');
+    my $learnerBinary = Slim::Utils::Misc::findbin('bliss-learner');
+    $paramRef->{'no_learner_binary'} = !$learnerBinary;
 }
 
 sub handler {

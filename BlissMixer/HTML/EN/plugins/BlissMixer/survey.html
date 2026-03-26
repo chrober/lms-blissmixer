@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlissMixer - Similarity Survey</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 { color: #e94560; margin-bottom: 4px; font-size: 1.5em; }
+        .subtitle { color: #888; font-size: 0.9em; margin-bottom: 20px; }
+        .card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 700px;
+            width: 100%;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .intro { line-height: 1.6; }
+        .intro p { margin-bottom: 12px; }
+        .round-counter {
+            text-align: center;
+            color: #e94560;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        .song {
+            background: #0f3460;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            border: 2px solid transparent;
+        }
+        .song:hover { background: #1a4a80; }
+        .song.selected { border-color: #e94560; background: #1a4a80; }
+        .song-info { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .song-radio { flex-shrink: 0; }
+        .song-radio input[type="radio"] {
+            width: 18px; height: 18px;
+            accent-color: #e94560;
+            cursor: pointer;
+        }
+        .song-meta { flex: 1; }
+        .song-title { font-weight: bold; font-size: 1.05em; color: #fff; }
+        .song-artist { color: #aaa; font-size: 0.9em; }
+        .song-album { color: #777; font-size: 0.85em; }
+        audio { width: 100%; height: 36px; }
+        audio::-webkit-media-controls-panel { background: #0a2a50; }
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #888;
+            font-size: 0.85em;
+        }
+        .volume-control input[type="range"] {
+            width: 100px;
+            accent-color: #e94560;
+        }
+        .player-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #888;
+            font-size: 0.85em;
+        }
+        .player-control select {
+            background: #0f3460;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 0.9em;
+            max-width: 180px;
+        }
+        .play-on-player-btn {
+            background: #0f3460;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .play-on-player-btn:hover { background: #1a4a80; }
+        .play-on-player-btn:disabled { color: #555; cursor: not-allowed; }
+        button.submit-btn {
+            background: #e94560;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 28px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button.submit-btn:hover { background: #c73a52; }
+        button.submit-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        button.begin-btn {
+            background: #e94560;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 36px;
+            font-size: 1.1em;
+            cursor: pointer;
+            display: block;
+            margin: 0 auto;
+        }
+        button.begin-btn:hover { background: #c73a52; }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #888;
+            font-size: 0.85em;
+            margin-top: 4px;
+        }
+        .error {
+            background: #4a1020;
+            color: #ff6b6b;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .loading {
+            text-align: center;
+            color: #888;
+            padding: 40px;
+            font-size: 1.1em;
+        }
+        a { color: #e94560; }
+        .back-link {
+            margin-top: 12px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        #intro-screen, #survey-screen { display: none; }
+        #intro-screen.active, #survey-screen.active { display: block; }
+    </style>
+</head>
+<body>
+    <h1>BlissMixer Similarity Survey</h1>
+    <div class="subtitle">Train your personal distance metric</div>
+
+    <div id="intro-screen" class="card active">
+        <div class="intro">
+            <p>This survey helps BlissMixer learn your personal sense of music similarity.
+               You will be presented with <strong>three songs</strong>. Listen to them and select
+               the one that is <strong>most different</strong> from the other two &mdash; the "odd one out".</p>
+            <p>The more rounds you complete, the better the learned metric will be.
+               <strong>50 rounds</strong> is a good start, <strong>200</strong> is optimal.</p>
+            <p>You can stop at any time and resume later &mdash; your votes are saved immediately.</p>
+        </div>
+        <br>
+        <div id="intro-status" style="text-align:center; color:#888; margin-bottom:16px;"></div>
+        <button class="begin-btn" onclick="startSurvey()">Begin!</button>
+    </div>
+
+    <div id="survey-screen" class="card">
+        <div class="round-counter">Round <span id="round-num">1</span></div>
+        <div id="songs-container">
+            <div class="loading">Loading songs...</div>
+        </div>
+        <div class="controls">
+            <div class="volume-control">
+                <label for="volume-slider">Vol</label>
+                <input type="range" id="volume-slider" min="0" max="100" value="50">
+            </div>
+            <div class="player-control">
+                <select id="player-select" title="Play songs on an LMS player instead of in the browser">
+                    <option value="">Browser playback</option>
+                </select>
+            </div>
+            <button class="submit-btn" id="submit-btn" disabled onclick="submitVote()">
+                Select the odd one out
+            </button>
+        </div>
+        <div class="status-bar">
+            <span id="triplet-count"></span>
+            <span id="status-msg"></span>
+        </div>
+    </div>
+
+    <div class="back-link">
+        <a href="javascript:void(0)" onclick="window.close()">Close Survey</a>
+    </div>
+
+<script>
+    const API_BASE = '/blissmixer/survey-api';
+    const JSONRPC_URL = window.location.origin + '/jsonrpc.js';
+    let sessionRound = 0;
+    let totalCount = 0;
+    let currentSongs = [];
+    let selectedOddOneOut = null;
+
+    // --- Volume ---
+    const volumeSlider = document.getElementById('volume-slider');
+    const savedVol = localStorage.getItem('bliss-survey-volume');
+    if (savedVol !== null) volumeSlider.value = savedVol;
+    volumeSlider.addEventListener('input', () => {
+        const vol = volumeSlider.value / 100;
+        document.querySelectorAll('audio').forEach(a => a.volume = vol);
+        localStorage.setItem('bliss-survey-volume', volumeSlider.value);
+    });
+
+    // --- Player selector ---
+    const playerSelect = document.getElementById('player-select');
+    const savedPlayer = localStorage.getItem('bliss-survey-player');
+
+    async function lmsRequest(playerid, cmd) {
+        const resp = await fetch(JSONRPC_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: 1, method: 'slim.request', params: [playerid, cmd] })
+        });
+        return (await resp.json()).result;
+    }
+
+    async function loadPlayers() {
+        try {
+            const result = await lmsRequest('', ['players', '0', '100']);
+            if (result && result.players_loop) {
+                result.players_loop.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.playerid;
+                    opt.textContent = p.name;
+                    playerSelect.appendChild(opt);
+                });
+                if (savedPlayer) playerSelect.value = savedPlayer;
+            }
+        } catch (e) { /* ignore — browser playback fallback */ }
+    }
+
+    playerSelect.addEventListener('change', () => {
+        localStorage.setItem('bliss-survey-player', playerSelect.value);
+        // Stop any browser audio when switching to player mode
+        if (playerSelect.value) {
+            document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
+        }
+    });
+
+    function playOnPlayer(songIndex) {
+        const pid = playerSelect.value;
+        if (!pid) return false; // use browser playback
+        const song = currentSongs[songIndex];
+        if (!song) return false;
+        lmsRequest(pid, ['playlist', 'play', song.audio_url]);
+        return true;
+    }
+
+    loadPlayers();
+
+    // --- Init ---
+    async function startSurvey() {
+        document.getElementById('intro-screen').classList.remove('active');
+        document.getElementById('survey-screen').classList.add('active');
+        await loadSongs();
+    }
+
+    // Load initial status
+    (async () => {
+        try {
+            const resp = await fetch(`${API_BASE}?action=status`);
+            const data = await resp.json();
+            const statusEl = document.getElementById('intro-status');
+            totalCount = data.count;
+            let msg = `${totalCount} triplet${totalCount !== 1 ? 's' : ''} recorded so far.`;
+            if (data.matrix_exists) msg += ' Learned matrix is available.';
+            statusEl.textContent = msg;
+        } catch (e) { /* ignore */ }
+    })();
+
+    // --- Load Songs ---
+    async function loadSongs() {
+        const container = document.getElementById('songs-container');
+        container.innerHTML = '<div class="loading">Loading songs...</div>';
+        document.getElementById('submit-btn').disabled = true;
+        selectedOddOneOut = null;
+
+        try {
+            const resp = await fetch(`${API_BASE}?action=songs`);
+            const data = await resp.json();
+            if (data.error) {
+                container.innerHTML = `<div class="error">${data.error}</div>`;
+                return;
+            }
+            currentSongs = data.songs;
+            renderSongs();
+        } catch (e) {
+            container.innerHTML = `<div class="error">Failed to load songs: ${e.message}</div>`;
+        }
+    }
+
+    // --- Render Songs ---
+    function renderSongs() {
+        const container = document.getElementById('songs-container');
+        const vol = volumeSlider.value / 100;
+        const usingPlayer = !!playerSelect.value;
+        container.innerHTML = currentSongs.map((song, i) => `
+            <div class="song" id="song-${i}" onclick="selectSong(${i})">
+                <div class="song-info">
+                    <div class="song-radio">
+                        <input type="radio" name="odd_one_out" id="radio-${i}"
+                               value="${song.rowid}" onchange="selectSong(${i})">
+                    </div>
+                    <div class="song-meta">
+                        <div class="song-title">${escapeHtml(song.title)}</div>
+                        <div class="song-artist">${escapeHtml(song.artist)}</div>
+                        <div class="song-album">${escapeHtml(song.album)}</div>
+                    </div>
+                    ${usingPlayer ? `<button class="play-on-player-btn" onclick="event.stopPropagation(); playOnPlayer(${i})" title="Play on ${escapeHtml(playerSelect.selectedOptions[0].text)}">&#9654;</button>` : ''}
+                </div>
+                ${usingPlayer ? '' : `<audio controls preload="metadata" src="${song.audio_url}"></audio>`}
+            </div>
+        `).join('');
+
+        if (!usingPlayer) {
+            // Set volume on all players
+            document.querySelectorAll('audio').forEach(a => a.volume = vol);
+
+            // Exclusive playback: pause others when one starts
+            document.querySelectorAll('audio').forEach(audio => {
+                audio.addEventListener('play', () => {
+                    document.querySelectorAll('audio').forEach(other => {
+                        if (other !== audio) other.pause();
+                    });
+                });
+            });
+        }
+
+        document.getElementById('round-num').textContent = totalCount + sessionRound + 1;
+    }
+
+    // --- Select Song ---
+    function selectSong(index) {
+        selectedOddOneOut = currentSongs[index];
+        document.getElementById(`radio-${index}`).checked = true;
+
+        document.querySelectorAll('.song').forEach((el, i) => {
+            el.classList.toggle('selected', i === index);
+        });
+
+        document.getElementById('submit-btn').disabled = false;
+        document.getElementById('submit-btn').textContent = 'Submit odd one out';
+    }
+
+    // --- Submit Vote ---
+    async function submitVote() {
+        if (!selectedOddOneOut) return;
+
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        // The two similar songs are the ones NOT selected
+        const similar = currentSongs.filter(s => s.rowid !== selectedOddOneOut.rowid);
+
+        try {
+            const resp = await fetch(API_BASE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    song_1_id: similar[0].rowid,
+                    song_2_id: similar[1].rowid,
+                    odd_one_out_id: selectedOddOneOut.rowid
+                })
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                sessionRound++;
+                totalCount = data.count;
+                document.getElementById('triplet-count').textContent = `${totalCount} triplets recorded`;
+                // Stop all audio before loading next round
+                document.querySelectorAll('audio').forEach(a => { a.pause(); a.src = ''; });
+                // Stop LMS player if active
+                if (playerSelect.value) {
+                    lmsRequest(playerSelect.value, ['stop']).catch(() => {});
+                }
+                await loadSongs();
+            } else {
+                document.getElementById('status-msg').textContent = data.error || 'Error saving vote';
+                btn.disabled = false;
+                btn.textContent = 'Submit odd one out';
+            }
+        } catch (e) {
+            document.getElementById('status-msg').textContent = 'Network error: ' + e.message;
+            btn.disabled = false;
+            btn.textContent = 'Submit odd one out';
+        }
+    }
+
+    // --- Utility ---
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+</script>
+</body>
+</html>

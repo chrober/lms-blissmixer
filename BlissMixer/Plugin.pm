@@ -30,6 +30,7 @@ use Slim::Utils::Prefs;
 use Plugins::BlissMixer::Analyser;
 use Plugins::BlissMixer::Importer;
 use Plugins::BlissMixer::Settings;
+use Plugins::BlissMixer::Survey;
 use Plugins::BlissMixer::ProtocolHandler;
 
 use constant DEF_NUM_DSTM_TRACKS => 5;
@@ -185,11 +186,24 @@ sub _initBinaries {
         Slim::Utils::Misc::addFindBinPaths(catdir($dir, 'Bin', 'windows'));
     } elsif (main::ISMAC) {
         Slim::Utils::Misc::addFindBinPaths(catdir($dir, 'Bin', 'mac'));
+    } else {
+        my @linuxPaths = (
+            catdir($dir, 'Bin', 'x86_64-linux'),
+            catdir($dir, 'Bin', 'aarch64-linux'),
+            catdir($dir, 'Bin', 'armhf-linux'),
+        );
+        for my $p (@linuxPaths) {
+            Slim::Utils::Misc::addFindBinPaths($p);
+        }
     }
     $mixerBinary = Slim::Utils::Misc::findbin('bliss-mixer');
     main::INFOLOG && $log->info("Mixer: ${mixerBinary}");
 
     Plugins::BlissMixer::Analyser::init($dbPath);
+
+    my $matrixPath = Slim::Utils::Prefs::dir() . "/learned_matrix.json";
+    my $tripletsPath = Slim::Utils::Prefs::dir() . "/training_triplets.json";
+    Plugins::BlissMixer::Survey::init($dbPath, $matrixPath, $tripletsPath);
 }
 
 sub _resetMixerTimeout {
@@ -320,6 +334,13 @@ sub _startMixer {
     push @params, "--weights";
     $lastWeights = _weightParam();
     push @params, $lastWeights;
+    # Auto-detect learned metric matrix
+    my $matrixFile = Plugins::BlissMixer::Survey::matrixPath();
+    if ($matrixFile && -e $matrixFile) {
+        push @params, "--matrix";
+        push @params, $matrixFile;
+        main::DEBUGLOG && $log->debug("Using learned matrix: $matrixFile");
+    }
     main::DEBUGLOG && $log->debug("Start mixer: $mixerBinary @params");
     eval { $mixer = Proc::Background->new({ 'die_upon_destroy' => 1 }, $mixerBinary, @params); };
     if ($@) {
@@ -360,7 +381,7 @@ sub _cliCommand {
 
     my $cmd = $request->getParam('_cmd');
 
-    if ($request->paramUndefinedOrNotOneOf($cmd, ['port', 'start-upload', 'stop', 'mix', 'list', 'analyser']) ) {
+    if ($request->paramUndefinedOrNotOneOf($cmd, ['port', 'start-upload', 'stop', 'mix', 'list', 'analyser', 'survey']) ) {
         $request->setStatusBadParams();
         return;
     }
@@ -395,6 +416,11 @@ sub _cliCommand {
 
     if ($cmd eq 'analyser') {
         Plugins::BlissMixer::Analyser::cliCommand($request);
+        return;
+    }
+
+    if ($cmd eq 'survey') {
+        Plugins::BlissMixer::Survey::cliCommand($request);
         return;
     }
 
