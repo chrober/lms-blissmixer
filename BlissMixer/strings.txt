@@ -163,7 +163,7 @@ BLISSMIXER_MIX_ALGORITHM
 	EN	Mixing strategy
 
 BLISSMIXER_MIX_ALGORITHM_DESC
-	EN	<b>Static:</b> Finds similar tracks based on the four metric weight sliders (Tempo, Timbre, Loudness, Chroma). Best when you know which audio characteristics matter most.<br/><br/><b>Extended isolation forest:</b> Trains a statistical model on the seed tracks and scores candidates by how well they fit the pattern. No manual tuning needed; requires at least 4 seeds.<br/><br/><b>Dynamic weighting:</b> Automatically discovers which characteristics the seed tracks have in common and emphasises those when searching. Adapts to each set of seeds.
+	EN	<b>Static:</b> Finds similar tracks based on the four metric weight sliders (Tempo, Timbre, Loudness, Chroma). Best when you know which audio characteristics matter most.<br/><br/><b>Extended isolation forest:</b> Trains a statistical model on the seed tracks and scores candidates by how well they fit the pattern. No manual tuning needed; requires at least 4 seeds.<br/><br/><b>Adaptive weighting:</b> Automatically discovers which characteristics the seed tracks have in common and emphasises those when searching. When a learned matrix from the similarity survey is available, it is blended in to incorporate your personal preferences.
 
 BLISSMIXER_ALG_STATIC
 	EN	Metric weightings (static)
@@ -172,13 +172,13 @@ BLISSMIXER_ALG_FOREST
 	EN	Extended isolation forest
 
 BLISSMIXER_ALG_DYNAMIC
-	EN	Dynamic weighting
+	EN	Adaptive weighting
 
 BLISSMIXER_DYNAMIC_SECTION
-	EN	Dynamic weighting
+	EN	Adaptive weighting
 
 BLISSMIXER_DYNAMIC_SECTION_NOTE
-	EN	These settings only apply when the dynamic weighting mixing strategy is selected above.
+	EN	These settings only apply when the adaptive weighting mixing strategy is selected above.
 
 BLISSMIXER_NUM_SEED_TRACKS
 	EN	Number of seed tracks
@@ -191,6 +191,12 @@ BLISSMIXER_SEED_STRICT_ORDER
 
 BLISSMIXER_SEED_STRICT_ORDER_DESC
 	EN	When enabled, always use the last N tracks from the play queue as seeds, preserving their order. When disabled, seeds are randomly chosen from a larger pool of recent tracks (original behaviour). Only applies to dynamic weighting.
+
+BLISSMIXER_LEARNED_BLEND
+	EN	Learned matrix influence
+
+BLISSMIXER_LEARNED_BLEND_DESC
+	EN	When multiple seed tracks are used and a learned matrix is available, this controls how much the learned matrix influences the distance calculation. 0 = pure variance-based (ignore learned matrix), 100 = pure learned matrix (ignore variance). Default: 50.
 
 BLISSMIXER_USE_TRACK_GENRE
 	EN	Use track genre
@@ -307,7 +313,7 @@ BLISSMIXER_LEARNING_SECTION
 	EN	Metric Learning
 
 BLISSMIXER_LEARNING_NOTE
-	EN	Train BlissMixer to match your personal sense of music similarity. Take the survey to provide training data, then run the learning process to generate a custom distance matrix. The matrix is used by the dynamic weighting algorithm when only one seed track is available.
+	EN	Train BlissMixer to match your personal sense of music similarity. Take the survey to provide training data, then run the learning process to generate a custom distance matrix. With a single seed track the learned matrix is used directly. With multiple seeds it is blended with the variance-based matrix according to the blend ratio setting.
 
 BLISSMIXER_LEARNER_NOT_FOUND
 	EN	Metric learning requires the bliss-learner binary, which was not found on this system. You can download it from <a href="https://github.com/CDrummond/bliss-analyser/releases" target="_blank">releases</a>.
