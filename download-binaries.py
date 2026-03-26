@@ -32,6 +32,11 @@ ANALYSER_GITHUB_ARTIFACTS = {"bliss-analyser-linux-x86-ffmpeg": {"bliss-analyser
                                 "swscale-8.dll": "windows/swscale-8.dll",
                                 "vcruntime140.dll": "windows/vcruntime140.dll"
                              }}
+LEARNER_GITHUB_REPO = "chrober/bliss-learner"
+LEARNER_GITHUB_ARTIFACTS = {"bliss-learner-linux-x86": {"bliss-learner": "x86_64-linux/bliss-learner"},
+                            "bliss-learner-linux-arm": {"bin/bliss-learner-armhf": "armhf-linux/bliss-learner", "bin/bliss-learner-aarch64": "aarch64-linux/bliss-learner"},
+                            "bliss-learner-mac":       {"bliss-learner": "mac/bliss-learner"},
+                            "bliss-learner-windows":   {"bliss-learner.exe": "windows/bliss-learner.exe"}}
 
 
 def info(s):
@@ -127,3 +132,5 @@ if len(sys.argv)<2 or sys.argv[1]=='mixer':
     download_artifacts(MIXER_GITHUB_REPO, MIXER_GITHUB_ARTIFACTS)
 if len(sys.argv)<2 or sys.argv[1]=='analyser':
     download_artifacts(ANALYSER_GITHUB_REPO, ANALYSER_GITHUB_ARTIFACTS)
+if len(sys.argv)<2 or sys.argv[1]=='learner':
+    download_artifacts(LEARNER_GITHUB_REPO, LEARNER_GITHUB_ARTIFACTS)

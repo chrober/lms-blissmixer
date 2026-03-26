@@ -171,7 +171,30 @@
 
         [% WRAPPER settingGroup title="BLISSMIXER_SEED_STRICT_ORDER" desc="BLISSMIXER_SEED_STRICT_ORDER_DESC" %]
         <input type="checkbox" name="pref_seed_strict_order" id="seed_strict_order" [% IF prefs.seed_strict_order %] checked [% END %] value="1"/>
-        [% END %]        
+        [% END %]
+        </div>
+
+        <br/><hr style="opacity:0.4" class="sub-sep"/><br/>
+        <b style="font-size:125%" id="learning-section-header" class="hidden-section" onclick="toggleSection('learning-section')">[% "BLISSMIXER_LEARNING_SECTION" | string %]</b><br/><br/>
+        <div id="learning-section" class="hidden">
+        [% IF no_learner_binary %]
+        <div>[% "BLISSMIXER_LEARNER_NOT_FOUND" | string %]</div><br/>
+        [% ELSE %]
+        <div style="opacity:0.6">[% "BLISSMIXER_LEARNING_NOTE" | string %]</div><br/>
+
+        <p><a href="[% survey_url %]" target="_blank" style="font-size:115%;font-weight:bold">[% survey_link_text %]</a></p><br/>
+
+        <table>
+            <tr><td>[% survey_triplets_text %]</td><td id="survey-triplet-count">-</td></tr>
+            <tr><td>[% matrix_status_text %]</td><td id="survey-matrix-status">-</td></tr>
+        </table><br/>
+
+        <button id="learning-btn" onclick="toggleLearning()" type="button" style="margin-bottom:16px">[% run_learning_text %]</button>
+        <button id="clear-triplets-btn" onclick="clearTriplets()" type="button" style="margin-left:8px;margin-bottom:16px">[% clear_triplets_text %]</button>
+        <div id="learning-status" style="margin-top:8px"></div>
+        [% END %]
+        </div>
+
     [% END %]
 
 [% PROCESS settings/footer.html %]
@@ -352,12 +375,128 @@
         }
     }
 
+    // --- Metric Learning ---
+    let learningIsRunning = false;
+    let surveyStatusInterval = undefined;
+    let surveyIntervalDuration = 5000;
+    let surveyStatusMsgCount = 0;
+    let learningErrorMsg = null;
+
+    async function sendSurveyMsg(act) {
+        const serverjsonurl = "[% jsonrpc_url %]";
+        const msg = JSON.stringify({id: 1, method: 'slim.request', params: ['', ['blissmixer', 'survey', 'act:'+act]]});
+        let response = await fetch(serverjsonurl, {
+            method: "post",
+            headers: { "Content-Type": "application/json", "Origin": window.location.hostname },
+            body: msg
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    }
+
+    function getSurveyStatus() {
+        sendSurveyMsg('status').then((resp) => {
+            surveyStatusMsgCount++;
+            if (undefined==resp || undefined==resp.result) return;
+            let r = resp.result;
+
+            learningIsRunning = undefined!=r.learning && 1==parseInt(r.learning);
+
+            let countEl = document.getElementById('survey-triplet-count');
+            if (undefined!=countEl) countEl.textContent = undefined!=r.triplets ? parseInt(r.triplets) : 0;
+
+            let matrixEl = document.getElementById('survey-matrix-status');
+            if (undefined!=matrixEl) matrixEl.textContent = (undefined!=r.matrix_exists && 1==parseInt(r.matrix_exists)) ? "[% matrix_available_text %]" : "[% matrix_not_available_text %]";
+
+            let btn = document.getElementById('learning-btn');
+            let clearBtn = document.getElementById('clear-triplets-btn');
+
+            if (undefined!=btn) {
+                if (undefined!=r.no_learner_binary && 1==parseInt(r.no_learner_binary)) {
+                    btn.disabled = true;
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = learningIsRunning ? "[% stop_learning_text %]" : "[% run_learning_text %]";
+                }
+            }
+
+            if (undefined!=clearBtn) setHidden(clearBtn, learningIsRunning);
+
+            // Status table (same pattern as analyser-status)
+            let statusEl = document.getElementById('learning-status');
+            if (undefined!=statusEl) {
+                // Don't overwrite a sticky error message unless learning is now running
+                if (learningIsRunning) learningErrorMsg = null;
+                if (learningErrorMsg) {
+                    statusEl.textContent = learningErrorMsg;
+                } else {
+                    let msg = "<table>";
+                    if (undefined!=r.start) {
+                        let date = new Date(parseInt(r.start)*1000);
+                        msg += "<tr><td>[% learning_start_text %]</td><td>"+date.toLocaleDateString()+" "+date.toLocaleTimeString()+"</td></tr>";
+                        if (undefined!=r.duration) {
+                            let s = parseInt(r.duration);
+                            let dstr = [parseInt(s / 60 / 60), parseInt(s / 60 % 60), parseInt(s % 60)].join(':').replace(/\b(\d)\b/g, '0$1');
+                            msg += "<tr><td>[% learning_duration_text %]</td><td>"+dstr+"</td></tr>";
+                        }
+                    }
+                    if (learningIsRunning && undefined!=r.msg) {
+                        msg += "<tr><td>[% learning_status_text %]</td><td>"+r.msg+"</td></tr>";
+                    }
+                    msg += "</table>";
+                    statusEl.innerHTML = (undefined!=r.start) ? msg : "";
+                }
+            }
+
+            // Adaptive polling: fast while running, slow when idle
+            if (learningIsRunning && surveyIntervalDuration > 1000) {
+                setSurveyStatusInterval(1000);
+            } else if (!learningIsRunning && surveyIntervalDuration < 5000 && surveyStatusMsgCount > 5) {
+                setSurveyStatusInterval(5000);
+            }
+        });
+    }
+
+    function setSurveyStatusInterval(v) {
+        surveyIntervalDuration = v;
+        clearInterval(surveyStatusInterval);
+        surveyStatusInterval = setInterval(getSurveyStatus, surveyIntervalDuration);
+    }
+
+    function toggleLearning() {
+        let act = learningIsRunning ? 'stop-learning' : 'run-learning';
+        sendSurveyMsg(act).then((resp) => {
+            if (undefined!=resp && undefined!=resp.result && undefined!=resp.result.msg) {
+                let msg = resp.result.msg;
+                let statusEl = document.getElementById('learning-status');
+                if (msg === 'Learning started' || msg === 'stopped') {
+                    learningErrorMsg = null;
+                    getSurveyStatus();
+                } else {
+                    // Stick the error message so polling doesn't overwrite it
+                    learningErrorMsg = msg;
+                    if (undefined!=statusEl) statusEl.textContent = msg;
+                }
+            }
+        });
+    }
+
+    function clearTriplets() {
+        if (confirm('Delete all training data? This cannot be undone.')) {
+            sendSurveyMsg('clear-triplets').then(() => getSurveyStatus());
+        }
+    }
+
     window.addEventListener("load",() => {
         statusInterval = setInterval(getAnalyserStatus, 1000);
         getAnalyserStatus();
+        getSurveyStatus();
+        surveyStatusInterval = setInterval(getSurveyStatus, surveyIntervalDuration);
         try {
             if (undefined!=window.localStorage) {
-                ["mixer-section", "analyser-section"].forEach(sect => {
+                ["mixer-section", "analyser-section", "learning-section"].forEach(sect => {
                     let val = window.localStorage.getItem("bliss-mixer::"+sect);
                     setSectionShown(sect, undefined==val ? "mixer-section"==sect : "true"==val);
                 });
