@@ -1318,7 +1318,7 @@ sub _getMixData {
                         norepalb    => int($prefs->get('no_repeat_album')),
                         forest      => int($prefs->get('use_forest') || 0),
                         dynamicweights => int($prefs->get('use_dynamic_weights') || 0),
-                        learnedblend => int($prefs->get('learned_blend') || 50),
+                        learnedblend => int($prefs->get('learned_blend') // 50),
                         genregroups => _genreGroups(),
                         allgenres   => int($prefs->get('match_all_genres') || 0),
                         main::DEBUGLOG ? (debug => 1) : ()
