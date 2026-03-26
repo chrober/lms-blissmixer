@@ -104,10 +104,10 @@
 
         [% WRAPPER settingGroup title="BLISSMIXER_MIX_ALGORITHM" desc="BLISSMIXER_MIX_ALGORITHM_DESC" %]
         <input type="hidden" name="pref_use_forest" id="use_forest" value="[% IF prefs.use_forest %]1[% ELSE %]0[% END %]"/>
-        <input type="hidden" name="pref_use_dynamic_weights" id="use_dynamic_weights" value="[% IF prefs.use_dynamic_weights %]1[% ELSE %]0[% END %]"/>
-        <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="static" [% IF !prefs.use_forest && !prefs.use_dynamic_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_STATIC" | string %]</label>
-        <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="forest" [% IF prefs.use_forest && !prefs.use_dynamic_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_FOREST" | string %]</label>
-        <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="dynamic" [% IF prefs.use_dynamic_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_DYNAMIC" | string %]</label>
+        <input type="hidden" name="pref_use_adaptive_weights" id="use_adaptive_weights" value="[% IF prefs.use_adaptive_weights %]1[% ELSE %]0[% END %]"/>
+        <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="static" [% IF !prefs.use_forest && !prefs.use_adaptive_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_STATIC" | string %]</label>
+        <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="forest" [% IF prefs.use_forest && !prefs.use_adaptive_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_FOREST" | string %]</label>
+        <label style="display:block;margin:2px 0"><input type="radio" name="mix_algorithm" value="dynamic" [% IF prefs.use_adaptive_weights %] checked [% END %] onchange="updateMixAlgorithm()"/> [% "BLISSMIXER_ALG_DYNAMIC" | string %]</label>
         [% END %]
 
         <br/><hr style="opacity:0.4" class="sub-sep"/><br/>
@@ -386,7 +386,7 @@
         let selected = document.querySelector('input[name="mix_algorithm"]:checked');
         if (selected) {
             document.getElementById('use_forest').value = selected.value === 'forest' ? '1' : '0';
-            document.getElementById('use_dynamic_weights').value = selected.value === 'dynamic' ? '1' : '0';
+            document.getElementById('use_adaptive_weights').value = selected.value === 'dynamic' ? '1' : '0';
         }
     }
 

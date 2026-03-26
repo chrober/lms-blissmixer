@@ -184,13 +184,13 @@ BLISSMIXER_NUM_SEED_TRACKS
 	EN	Number of seed tracks
 
 BLISSMIXER_NUM_SEED_TRACKS_DESC
-	EN	How many recent tracks to use as seeds for the dynamic weighting strategy. Fewer seeds give sharper, more focused weights. More seeds capture broader context but produce blurrier weights. Default: 3.
+	EN	How many recent tracks to use as seeds for the adaptive weighting strategy. Fewer seeds give sharper, more focused weights. More seeds capture broader context but produce blurrier weights. Default: 3.
 
 BLISSMIXER_SEED_STRICT_ORDER
 	EN	Use most recent tracks as seeds
 
 BLISSMIXER_SEED_STRICT_ORDER_DESC
-	EN	When enabled, always use the last N tracks from the play queue as seeds, preserving their order. When disabled, seeds are randomly chosen from a larger pool of recent tracks (original behaviour). Only applies to dynamic weighting.
+	EN	When enabled, always use the last N tracks from the play queue as seeds, preserving their order. When disabled, seeds are randomly chosen from a larger pool of recent tracks (original behaviour). Only applies to adaptive weighting.
 
 BLISSMIXER_LEARNED_BLEND
 	EN	Learned matrix influence
