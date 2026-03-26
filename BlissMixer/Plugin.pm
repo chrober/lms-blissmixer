@@ -97,7 +97,7 @@ sub initPlugin {
         max_bpm_diff     => 0,
         use_track_genre  => 0,
         use_forest       => 1,
-        use_dynamic_weights => 0,
+        use_adaptive_weights => 0,
         num_seed_tracks  => 3,
         seed_strict_order => 1,
         learned_blend    => 50,
@@ -1029,11 +1029,11 @@ sub _dstmMix {
 
     main::DEBUGLOG && $log->debug("Get tracks");
     my $useForest = $prefs->get('use_forest') || 0;
-    my $useDynamicWeights = $prefs->get('use_dynamic_weights') || 0;
-    my $numSeedTracks = $useDynamicWeights
+    my $useAdaptiveWeights = $prefs->get('use_adaptive_weights') || 0;
+    my $numSeedTracks = $useAdaptiveWeights
         ? ($prefs->get('num_seed_tracks') || 3)
         : ($useForest ? NUM_FOREST_SEED_TRACKS : NUM_SEED_TRACKS);
-    my $strictSeeds = $useDynamicWeights && ($prefs->get('seed_strict_order') // 1);
+    my $strictSeeds = $useAdaptiveWeights && ($prefs->get('seed_strict_order') // 1);
     my $seedTracks = _getMixableProperties($client, $numSeedTracks, $strictSeeds);
 
     # don't seed from radio stations - only do if we're playing from some track based source
@@ -1063,10 +1063,10 @@ sub _dstmMix {
             my $previousTracks = _getPreviousTracks($client, $maxNumPrevTracks);
             main::DEBUGLOG && $log->debug("Num tracks to previous: " . ($previousTracks ? scalar(@$previousTracks) : 0));
 
-            # Collect comparison seeds for "what-if" logging (debug only, dynamic weights only)
+            # Collect comparison seeds for "what-if" logging (debug only, adaptive weights only)
             my @staticCompSeeds = ();
             my @eifCompSeeds = ();
-            if (main::DEBUGLOG && $useDynamicWeights) {
+            if (main::DEBUGLOG && $useAdaptiveWeights) {
                 my $staticSeedTracks = _getMixableProperties($client, NUM_SEED_TRACKS, 0);
                 if ($staticSeedTracks && ref $staticSeedTracks) {
                     foreach my $st (@$staticSeedTracks) {
@@ -1191,7 +1191,7 @@ sub _dstmMix {
                             $cb->($client, $tracks);
 
                             # Fire "what-if" comparison requests (debug only, dynamic weights only)
-                            if (main::DEBUGLOG && $useDynamicWeights) {
+                            if (main::DEBUGLOG && $useAdaptiveWeights) {
                                 my $prevRef = $previousTracks ? \@$previousTracks : undef;
                                 if (scalar @staticCompSeeds > 0) {
                                     my $staticJson = _buildComparisonJson(\@staticCompSeeds, $prevRef, $dstm_tracks, $filterGenres, 0, 0);
@@ -1317,7 +1317,7 @@ sub _getMixData {
                         norepart    => int($prefs->get('no_repeat_artist')),
                         norepalb    => int($prefs->get('no_repeat_album')),
                         forest      => int($prefs->get('use_forest') || 0),
-                        dynamicweights => int($prefs->get('use_dynamic_weights') || 0),
+                        adaptiveweights => int($prefs->get('use_adaptive_weights') || 0),
                         learnedblend => int($prefs->get('learned_blend') // 50),
                         genregroups => _genreGroups(),
                         allgenres   => int($prefs->get('match_all_genres') || 0),
@@ -1350,10 +1350,10 @@ sub _getListData {
     return $jsonData;
 }
 
-# Build a comparison request JSON with explicit forest/dynamicweights overrides
-# (used for "what-if" debug logging when dynamic weights is active)
+# Build a comparison request JSON with explicit forest/adaptiveweights overrides
+# (used for "what-if" debug logging when adaptive weights is active)
 sub _buildComparisonJson {
-    my ($seedTracks, $previousTracks, $trackCount, $filterGenres, $forest, $dynamicweights) = @_;
+    my ($seedTracks, $previousTracks, $trackCount, $filterGenres, $forest, $adaptiveweights) = @_;
     my @tracks = ref $seedTracks ? @$seedTracks : ($seedTracks);
     my @track_paths = ();
     my @previous_paths = ();
@@ -1388,7 +1388,7 @@ sub _buildComparisonJson {
                         norepart    => int($prefs->get('no_repeat_artist')),
                         norepalb    => int($prefs->get('no_repeat_album')),
                         forest      => int($forest),
-                        dynamicweights => int($dynamicweights),
+                        adaptiveweights => int($adaptiveweights),
                         genregroups => _genreGroups(),
                         allgenres   => int($prefs->get('match_all_genres') || 0),
                     });

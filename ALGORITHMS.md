@@ -63,20 +63,20 @@ crate without pulling in heavy native audio libraries it never uses.
   <th></th>
   <th>Static Weights</th>
   <th>Extended Isolation Forest</th>
-  <th>Dynamic Weights</th>
+  <th>Adaptive Weighting</th>
 </tr>
 <tr><th colspan="4" style="background-color:#555; text-align:center; border-width:1px 0px; border-style:solid;">At a glance</th></tr>
 <tr>
   <td><b>How it works</b></td>
   <td>You set four sliders to tell the mixer what matters most to you (rhythm, tone, loudness, harmony). It finds songs that are similar according to your preferences.</td>
   <td>The mixer looks at a batch of recent songs, learns what they have in common, and finds songs that fit the same pattern. You don't configure anything.</td>
-  <td>The mixer looks at what your last few songs share — if they have a similar rhythm but different harmonies, it focuses on rhythm. It figures out what matters <em>for these songs</em> automatically.</td>
+  <td>The mixer looks at what your last few songs share — if they have a similar rhythm but different harmonies, it focuses on rhythm. When a personal similarity model is available, it blends that in too. It figures out what matters <em>for these songs</em> automatically.</td>
 </tr>
 <tr>
   <td><b>User control</b></td>
   <td>Full — you decide what "similar" means via sliders</td>
   <td>None — the algorithm decides everything</td>
-  <td>None — but it adapts to each set of seeds, so it indirectly follows your listening choices</td>
+  <td>Mostly automatic — adapts to each set of seeds. Optional blend slider to tune how much a trained personal model influences the result</td>
 </tr>
 <tr>
   <td><b>Best for</b></td>
@@ -88,20 +88,19 @@ crate without pulling in heavy native audio libraries it never uses.
   <td><b>Number of recent songs used</b></td>
   <td>5</td>
   <td>10 (at least 4 needed)</td>
-  <td>Configurable (default 3, as few as 2)</td>
-</tr>
+  <td>Configurable (default 3, as few as 2; single seed works when a learned matrix is available)</td></tr>
 <tr>
   <td><b>Downsides</b></td>
   <td>You need to find the right slider positions yourself; wrong settings can give poor results</td>
   <td>Needs many seed songs; treats all audio characteristics as equally important — can't be nudged</td>
-  <td>With very diverse seeds, it can't find a clear common thread and the weighting becomes bland</td>
+  <td>With very diverse seeds, it can't find a clear common thread and the weighting becomes bland. Getting the most out of it requires training a personal model via the similarity survey</td>
 </tr>
 <tr><th colspan="4" style="background-color:#555; text-align:center; border-width:1px 0px; border-style:solid;">Technical details</th></tr>
 <tr>
   <td><b>Seed tracks</b></td>
   <td>5</td>
   <td>10 (min 4 required)</td>
-  <td>Configurable (default 3, min 2)</td>
+  <td>Configurable (default 3, min 2; single seed with learned matrix)</td>
 </tr>
 <tr>
   <td><b>Seed selection</b></td>
@@ -119,13 +118,13 @@ crate without pulling in heavy native audio libraries it never uses.
   <td><b>Distance metric</b></td>
   <td>Squared Euclidean (user-weighted)</td>
   <td>Anomaly score (forest model)</td>
-  <td>Mahalanobis (variance-weighted), via <code>bliss-rs</code></td>
+  <td>Mahalanobis via <code>bliss-rs</code>: variance-weighted matrix, optionally blended with a learned matrix from the similarity survey</td>
 </tr>
 <tr>
   <td><b>Feature weighting</b></td>
   <td>Manual sliders (Tempo/Timbre/Loudness/Chroma)</td>
   <td>None (all features equal)</td>
-  <td>Automatic from seed variance, via <code>bliss-rs</code> <code>variance_based_weight_matrix()</code></td>
+  <td>Automatic from seed variance via <code>bliss-rs</code> <code>variance_based_weight_matrix()</code>, optionally blended with a learned Mahalanobis matrix</td>
 </tr>
 <tr>
   <td><b>Multi-seed merging</b></td>
@@ -149,7 +148,7 @@ crate without pulling in heavy native audio libraries it never uses.
   <td><b>Fallback</b></td>
   <td>— (this is the default)</td>
   <td>Falls back to Static if &lt; 4 seeds</td>
-  <td>Falls back to Static if &lt; 2 seeds or no matrix</td>
+  <td>Falls back to Static if 1 seed and no learned matrix loaded</td>
 </tr>
 </table>
 
@@ -255,31 +254,38 @@ flowchart TD
 
 ---
 
-## Dynamic Weights
+## Adaptive Weighting
 
 Automatically determines feature importance from seed similarity. Features
 where the seeds agree (low variance) are weighted heavily; features where
-they disagree (high variance) are weighted lightly.
+they disagree (high variance) are weighted lightly. When a learned matrix
+(trained via the similarity survey) is available, it is blended in to
+incorporate personal preferences into the distance calculation.
 
 > **In plain English:** This algorithm listens to what your recent songs have
 > in common and automatically focuses on those shared qualities when searching
 > for the next track. If your last few songs all have a similar rhythmic feel
 > but very different harmonies, the algorithm concludes "rhythm matters here,
 > harmony doesn't" and finds songs that match the rhythm — without you having
-> to touch any sliders. It adapts to every new set of seeds, so the mix
-> naturally evolves as your listening session progresses. Think of it as a DJ
-> who pays attention to what ties your recent songs together and picks the
-> next track accordingly.
+> to touch any sliders. If you've trained a personal similarity model via the
+> survey, it blends your preferences into the mix as well. It adapts to every
+> new set of seeds, so the mix naturally evolves as your listening session
+> progresses. Think of it as a DJ who pays attention to what ties your recent
+> songs together, factors in your personal taste, and picks the next track
+> accordingly.
 
 ```mermaid
 flowchart TD
     A["Seed tracks<br/>(configurable, default 3)"] --> B["Look up each seed<br/>in bliss.db<br/>(metrics pre-computed by bliss-rs)"]
     B --> C["Collect raw metrics<br/>(unweighted) for all seeds"]
     C --> D{Number of seeds?}
-    D -- "≥ 2" --> E["Compute variance per feature<br/>via bliss-rs variance_based_weight_matrix()<br/>weight_i = 1 / (variance_i + ε)<br/>normalise so Σ weights = 23"]
+    D -- "≥ 2" --> E["Compute variance matrix<br/>via bliss-rs variance_based_weight_matrix()<br/>weight_i = 1 / (variance_i + ε)<br/>normalise so Σ weights = 23"]
     D -- "1 (with learned matrix)" --> F[Use pre-trained<br/>Mahalanobis matrix]
     D -- "1 (no matrix)" --> G[Fall back to<br/>Static Weights algorithm]
-    E --> H[Build diagonal<br/>weight matrix]
+    E --> BL{Learned matrix<br/>loaded?}
+    BL -- "Yes" --> BM["Blend matrices:<br/>M = α·M_learned + (1−α)·M_variance<br/>(α = learnedblend / 100)"]
+    BL -- "No" --> H
+    BM --> H[Build final<br/>weight matrix]
     F --> H
     H --> I[Compute mean<br/>of seed metrics<br/>= ideal target point]
     I --> J["Full DB scan:<br/>load all ~62k tracks<br/>from bliss.db<br/>(raw, unweighted metrics)"]
@@ -296,6 +302,7 @@ flowchart TD
     style A fill:#e8f4f8,stroke:#2980b9,color:#1a3a4a
     style B fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     style E fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style BM fill:#fef3c7,stroke:#f59e0b,color:#5c4813
     style K fill:#fef3c7,stroke:#f59e0b,color:#5c4813
     style J fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     style M fill:#fce4ec,stroke:#e74c3c,color:#5c1a1a
@@ -307,6 +314,11 @@ flowchart TD
 - **Automatic weighting:** No manual slider tuning needed. The algorithm
   discovers which features matter *for these specific seeds*. Uses
   `bliss-rs`'s `variance_based_weight_matrix()` to compute the weight matrix.
+- **Learned matrix blending:** When a learned Mahalanobis matrix is available
+  (trained via the similarity survey), it is blended with the variance-based
+  matrix: `M = α·M_learned + (1−α)·M_variance`, where `α = learnedblend / 100`.
+  The blend ratio is configurable via a slider (0 = pure variance, 100 = pure
+  learned). With a single seed, the learned matrix is used directly.
 - **Full database scan:** Unlike the KD-tree approaches, every track in the
   database is scored. This avoids the pre-filter bias where the KD-tree
   (using equal weights) might exclude relevant tracks. Takes ~750ms for 62k
@@ -332,7 +344,7 @@ affects the trade-off between weight precision and context breadth:
   diverse enough seeds the algorithm converges to near-uniform weighting,
   losing its adaptive advantage.
 
-By default, dynamic weighting uses **strict seed order**: the last N tracks
+By default, adaptive weighting uses **strict seed order**: the last N tracks
 from the play queue are used as seeds, in order. This is deliberate — it means
 each DSTM trigger bases its search on the tracks that were *just played*,
 producing a natural continuation of the current listening direction.
@@ -356,7 +368,7 @@ the random selection behaviour if preferred.
 Given seeds of 3 classic rock tracks, the debug log might show:
 
 ```
-Dynamic weights - metric groups (1-100): Tempo=1.0  Timbre=25.3  Loudness=2.2  Chroma=71.5
+Adaptive weighting - metric groups (1-100): Tempo=1.0  Timbre=25.3  Loudness=2.2  Chroma=71.5
 Strongest seed similarities (highest weight): Chroma9=3.66, Chroma8=3.29, Chroma7=2.67
 Weakest seed similarities (lowest weight): MeanSpectralFlatness=0.11, Chroma11=0.05, Tempo=0.02
 ```
