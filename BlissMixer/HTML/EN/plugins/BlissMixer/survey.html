@@ -4,22 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BlissMixer - Similarity Survey</title>
+    <!-- Material skin CSS stack (same as standardheader.html) -->
+    <link rel="stylesheet" href="/material/skin.css">
+    <link rel="stylesheet" href="/material/html/css/themes/dark.css" id="themecss">
+    <link rel="stylesheet" href="/material/html/css/colors/blue.css" id="colorcss">
+    <link rel="stylesheet" href="/material/html/css/classic-skin/dark.css" id="classicskincss">
+    <script>
+    // Sync theme/color with the user's Material skin preference (mirrors standardheader.html logic)
+    (function() {
+        let theme = localStorage.getItem('lms-material::theme');
+        if (!theme || theme === 'darker') theme = 'dark';
+        else if (theme === 'auto') {
+            theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        let t = theme.split('-');
+        if (t.length > 1 && (t[t.length-1] === 'colored' || t[t.length-1] === 'standard')) t.pop();
+        let themeName = t.join('-');
+        if (theme.startsWith('light') || theme.indexOf('/light/') >= 0) {
+            document.getElementById('themecss').href = '/material/html/css/themes/light.css';
+            document.getElementById('classicskincss').href = '/material/html/css/classic-skin/light.css';
+        } else if (themeName && themeName !== 'dark') {
+            if (themeName.startsWith('user:')) {
+                document.getElementById('themecss').href = '/material/usertheme/' + themeName.substring(5);
+            } else {
+                document.getElementById('themecss').href = '/material/html/css/themes/' + themeName + '.css';
+            }
+        }
+        let col = localStorage.getItem('lms-material::color');
+        if (col && col !== 'blue') {
+            if (col.startsWith('user:')) {
+                document.getElementById('colorcss').href = '/material/usercolor/' + col.substring(5);
+            } else {
+                document.getElementById('colorcss').href = '/material/html/css/colors/' + col + '.css';
+            }
+        }
+    })();
+    </script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #1a1a2e;
-            color: #e0e0e0;
+            /* mods.css sets font-size/background/color on body, we just add layout */
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 20px;
         }
-        h1 { color: #e94560; margin-bottom: 4px; font-size: 1.5em; }
-        .subtitle { color: #888; font-size: 0.9em; margin-bottom: 20px; }
+        h1 {
+            color: var(--active-color);
+            margin-bottom: 4px;
+            font-size: 1.5em;
+            font-weight: var(--bold-weight, 500);
+        }
+        .subtitle { color: var(--text-color); opacity: 0.6; font-size: 0.9em; margin-bottom: 20px; }
         .card {
-            background: #16213e;
+            background: var(--std-popup-background-color);
             border-radius: 12px;
             padding: 24px;
             max-width: 700px;
@@ -27,17 +66,18 @@
             margin-bottom: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
-        .intro { line-height: 1.6; }
+        .intro { line-height: 1.6; opacity: 0.6; }
         .intro p { margin-bottom: 12px; }
+        .intro strong { opacity: 1; color: var(--text-color); }
         .round-counter {
             text-align: center;
-            color: #e94560;
+            color: var(--active-color);
             font-size: 1.1em;
-            font-weight: bold;
+            font-weight: var(--bold-weight, 500);
             margin-bottom: 12px;
         }
         .song {
-            background: #0f3460;
+            background: var(--browse-header-color);
             border-radius: 8px;
             padding: 16px;
             margin-bottom: 12px;
@@ -45,21 +85,56 @@
             transition: background 0.2s, border-color 0.2s;
             border: 2px solid transparent;
         }
-        .song:hover { background: #1a4a80; }
-        .song.selected { border-color: #e94560; background: #1a4a80; }
+        .song:hover { background: var(--nav-hover-color); }
+        .song.selected {
+            border-color: var(--primary-color);
+            background: rgba(var(--highlight-rgb), 0.15);
+        }
         .song-info { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
         .song-radio { flex-shrink: 0; }
         .song-radio input[type="radio"] {
             width: 18px; height: 18px;
-            accent-color: #e94560;
+            accent-color: var(--primary-color);
             cursor: pointer;
         }
         .song-meta { flex: 1; }
-        .song-title { font-weight: bold; font-size: 1.05em; color: #fff; }
-        .song-artist { color: #aaa; font-size: 0.9em; }
-        .song-album { color: #777; font-size: 0.85em; }
+        .song-title { font-weight: var(--bold-weight, 500); font-size: 1.05em; }
+        .song-artist { opacity: 0.6; font-size: 0.9em; }
+        .song-album { opacity: 0.45; font-size: 0.85em; }
         audio { width: 100%; height: 36px; }
-        audio::-webkit-media-controls-panel { background: #0a2a50; }
+        .lms-transport {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            height: 36px;
+        }
+        .lms-transport button {
+            background: none;
+            border: none;
+            color: var(--active-color);
+            width: 36px; height: 36px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border-radius: 50%;
+        }
+        .lms-transport button:hover { opacity: 0.7; }
+        .lms-transport button svg { width: 32px; height: 32px; fill: currentColor; }
+        .lms-transport input[type="range"] {
+            flex: 1;
+            accent-color: var(--primary-color);
+            height: 4px;
+        }
+        .lms-transport .lms-time {
+            font-size: 0.8em;
+            opacity: 0.6;
+            min-width: 70px;
+            text-align: right;
+            flex-shrink: 0;
+        }
         .controls {
             display: flex;
             align-items: center;
@@ -72,77 +147,87 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #888;
+            opacity: 0.6;
             font-size: 0.85em;
         }
         .volume-control input[type="range"] {
             width: 100px;
-            accent-color: #e94560;
+            accent-color: var(--primary-color);
         }
         .player-control {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #888;
+            opacity: 0.6;
             font-size: 0.85em;
         }
         .player-control select {
-            background: #0f3460;
-            color: #e0e0e0;
-            border: 1px solid #333;
+            background: var(--background-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
             border-radius: 4px;
             padding: 4px 8px;
             font-size: 0.9em;
             max-width: 180px;
+            font-family: Roboto, sans-serif;
         }
-        .play-on-player-btn {
-            background: #0f3460;
-            color: #e0e0e0;
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 4px 10px;
-            cursor: pointer;
-            font-size: 0.85em;
-        }
-        .play-on-player-btn:hover { background: #1a4a80; }
-        .play-on-player-btn:disabled { color: #555; cursor: not-allowed; }
         button.submit-btn {
-            background: #e94560;
+            background: var(--primary-color);
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 100px;
             padding: 10px 28px;
             font-size: 1em;
+            font-weight: var(--bold-weight, 500);
+            font-family: Roboto, sans-serif;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: opacity 0.2s;
         }
-        button.submit-btn:hover { background: #c73a52; }
+        button.submit-btn:hover { opacity: 0.85; }
         button.submit-btn:disabled {
-            background: #555;
+            background: var(--border-color);
+            color: var(--text-color);
             cursor: not-allowed;
+            opacity: 0.5;
         }
         button.begin-btn {
-            background: #e94560;
+            background: var(--primary-color);
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 100px;
             padding: 12px 36px;
             font-size: 1.1em;
+            font-weight: var(--bold-weight, 500);
+            font-family: Roboto, sans-serif;
             cursor: pointer;
             display: block;
             margin: 0 auto;
+            transition: opacity 0.2s;
         }
-        button.begin-btn:hover { background: #c73a52; }
+        button.begin-btn:hover { opacity: 0.85; }
+        button.skip-btn {
+            background: none;
+            color: var(--active-color);
+            border: 1px solid var(--active-color);
+            border-radius: 100px;
+            padding: 10px 20px;
+            font-size: 0.9em;
+            font-weight: var(--bold-weight, 500);
+            font-family: Roboto, sans-serif;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button.skip-btn:hover { opacity: 0.7; }
         .status-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            color: #888;
+            opacity: 0.6;
             font-size: 0.85em;
             margin-top: 4px;
         }
         .error {
-            background: #4a1020;
+            background: rgba(198, 40, 40, 0.15);
             color: #ff6b6b;
             padding: 12px;
             border-radius: 8px;
@@ -150,11 +235,11 @@
         }
         .loading {
             text-align: center;
-            color: #888;
+            opacity: 0.6;
             padding: 40px;
             font-size: 1.1em;
         }
-        a { color: #e94560; }
+        a { color: var(--active-color); }
         .back-link {
             margin-top: 12px;
             text-align: center;
@@ -173,12 +258,15 @@
             <p>This survey helps BlissMixer learn your personal sense of music similarity.
                You will be presented with <strong>three songs</strong>. Listen to them and select
                the one that is <strong>most different</strong> from the other two &mdash; the "odd one out".</p>
+            <p>This is <strong>not a quiz</strong> &mdash; there are no right or wrong answers!
+               The songs are picked randomly and it is purely about capturing your individual taste.
+               If all three songs sound equally similar, just hit <strong>Skip</strong> and move on.</p>
             <p>The more rounds you complete, the better the learned metric will be.
                <strong>50 rounds</strong> is a good start, <strong>200</strong> is optimal.</p>
             <p>You can stop at any time and resume later &mdash; your votes are saved immediately.</p>
         </div>
         <br>
-        <div id="intro-status" style="text-align:center; color:#888; margin-bottom:16px;"></div>
+        <div id="intro-status" style="text-align:center; opacity:0.6; margin-bottom:16px;"></div>
         <button class="begin-btn" onclick="startSurvey()">Begin!</button>
     </div>
 
@@ -200,6 +288,7 @@
             <button class="submit-btn" id="submit-btn" disabled onclick="submitVote()">
                 Select the odd one out
             </button>
+            <button class="skip-btn" onclick="skipRound()">Skip</button>
         </div>
         <div class="status-bar">
             <span id="triplet-count"></span>
@@ -214,6 +303,8 @@
 <script>
     const API_BASE = '/blissmixer/survey-api';
     const JSONRPC_URL = window.location.origin + '/jsonrpc.js';
+    const SVG_PLAY  = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+    const SVG_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
     let sessionRound = 0;
     let totalCount = 0;
     let currentSongs = [];
@@ -224,9 +315,16 @@
     const savedVol = localStorage.getItem('bliss-survey-volume');
     if (savedVol !== null) volumeSlider.value = savedVol;
     volumeSlider.addEventListener('input', () => {
-        const vol = volumeSlider.value / 100;
-        document.querySelectorAll('audio').forEach(a => a.volume = vol);
         localStorage.setItem('bliss-survey-volume', volumeSlider.value);
+        const pid = playerSelect.value;
+        if (pid) {
+            // LMS player mode: set player mixer volume (0-100)
+            lmsRequest(pid, ['mixer', 'volume', String(volumeSlider.value)]);
+        } else {
+            // Browser mode: set <audio> element volume (0.0-1.0)
+            const vol = volumeSlider.value / 100;
+            document.querySelectorAll('audio').forEach(a => a.volume = vol);
+        }
     });
 
     // --- Player selector ---
@@ -260,18 +358,105 @@
     playerSelect.addEventListener('change', () => {
         localStorage.setItem('bliss-survey-player', playerSelect.value);
         // Stop any browser audio when switching to player mode
-        if (playerSelect.value) {
-            document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
+        document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
+        // Stop LMS player and polling if active
+        stopLmsPolling();
+        lmsActiveSong = -1;
+        if (savedPlayer) {
+            lmsRequest(savedPlayer, ['stop']).catch(() => {});
         }
+        // Re-render songs to switch between <audio> tags and LMS transport
+        if (currentSongs.length > 0) renderSongs();
     });
 
-    function playOnPlayer(songIndex) {
+    // --- LMS transport controls ---
+    let lmsActiveSong = -1;   // which song index is loaded on LMS
+    let lmsSeeking = false;   // true while user drags the seek bar
+    let lmsPollTimer = null;
+
+    function toggleLmsPlay(songIndex) {
         const pid = playerSelect.value;
-        if (!pid) return false; // use browser playback
+        if (!pid) return;
         const song = currentSongs[songIndex];
-        if (!song) return false;
-        lmsRequest(pid, ['playlist', 'play', song.audio_url]);
-        return true;
+        if (!song || !song.track_id) return;
+
+        if (lmsActiveSong === songIndex) {
+            // Same song: toggle play/pause
+            lmsRequest(pid, ['pause']).then(() => pollLmsStatus());
+        } else {
+            // Different song: load and play
+            lmsActiveSong = songIndex;
+            // Reset all transport UIs
+            currentSongs.forEach((_, j) => {
+                const btn = document.getElementById('lms-playbtn-' + j);
+                const seek = document.getElementById('lms-seek-' + j);
+                const time = document.getElementById('lms-time-' + j);
+                if (btn) btn.innerHTML = SVG_PLAY;
+                if (seek) seek.value = 0;
+                if (time) time.textContent = '0:00 / 0:00';
+            });
+            lmsRequest(pid, ['playlistcontrol', 'cmd:load', 'track_id:' + song.track_id]);
+            startLmsPolling();
+        }
+    }
+
+    function lmsSeek(songIndex, value) {
+        if (songIndex !== lmsActiveSong) return;
+        const pid = playerSelect.value;
+        if (!pid) return;
+        // value is 0–1000; convert to seconds using duration from the seek bar max data
+        const seek = document.getElementById('lms-seek-' + songIndex);
+        const duration = parseFloat(seek.dataset.duration || 0);
+        if (duration > 0) {
+            const seconds = (value / 1000) * duration;
+            lmsRequest(pid, ['time', String(seconds)]);
+        }
+    }
+
+    function startLmsPolling() {
+        stopLmsPolling();
+        pollLmsStatus();
+        lmsPollTimer = setInterval(pollLmsStatus, 1000);
+    }
+
+    function stopLmsPolling() {
+        if (lmsPollTimer) { clearInterval(lmsPollTimer); lmsPollTimer = null; }
+    }
+
+    async function pollLmsStatus() {
+        const pid = playerSelect.value;
+        if (!pid || lmsActiveSong < 0) { stopLmsPolling(); return; }
+        try {
+            const r = await lmsRequest(pid, ['status', '-', '1', 'tags:d']);
+            const mode = r.mode;  // "play", "pause", "stop"
+            const time = parseFloat(r.time || 0);
+            const duration = parseFloat(r.duration || 0);
+            const btn = document.getElementById('lms-playbtn-' + lmsActiveSong);
+            const seek = document.getElementById('lms-seek-' + lmsActiveSong);
+            const timeEl = document.getElementById('lms-time-' + lmsActiveSong);
+
+            if (btn) btn.innerHTML = mode === 'play' ? SVG_PAUSE : SVG_PLAY;
+            if (seek && !lmsSeeking) {
+                seek.dataset.duration = duration;
+                seek.value = duration > 0 ? Math.round((time / duration) * 1000) : 0;
+            }
+            if (timeEl) timeEl.textContent = formatTime(time) + ' / ' + formatTime(duration);
+
+            // Sync volume slider with player volume
+            if (r['mixer volume'] !== undefined) {
+                const playerVol = parseInt(r['mixer volume']);
+                if (playerVol >= 0 && !volumeSlider.matches(':active')) {
+                    volumeSlider.value = playerVol;
+                }
+            }
+
+            if (mode === 'stop') stopLmsPolling();
+        } catch (e) { /* ignore poll errors */ }
+    }
+
+    function formatTime(secs) {
+        const s = Math.floor(secs);
+        return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
     }
 
     loadPlayers();
@@ -289,7 +474,7 @@
             const resp = await fetch(`${API_BASE}?action=status`);
             const data = await resp.json();
             const statusEl = document.getElementById('intro-status');
-            totalCount = data.count;
+            totalCount = Number(data.count);
             let msg = `${totalCount} triplet${totalCount !== 1 ? 's' : ''} recorded so far.`;
             if (data.matrix_exists) msg += ' Learned matrix is available.';
             statusEl.textContent = msg;
@@ -301,6 +486,7 @@
         const container = document.getElementById('songs-container');
         container.innerHTML = '<div class="loading">Loading songs...</div>';
         document.getElementById('submit-btn').disabled = true;
+        document.getElementById('submit-btn').textContent = 'Select the odd one out';
         selectedOddOneOut = null;
 
         try {
@@ -334,9 +520,16 @@
                         <div class="song-artist">${escapeHtml(song.artist)}</div>
                         <div class="song-album">${escapeHtml(song.album)}</div>
                     </div>
-                    ${usingPlayer ? `<button class="play-on-player-btn" onclick="event.stopPropagation(); playOnPlayer(${i})" title="Play on ${escapeHtml(playerSelect.selectedOptions[0].text)}">&#9654;</button>` : ''}
                 </div>
-                ${usingPlayer ? '' : `<audio controls preload="metadata" src="${song.audio_url}"></audio>`}
+                ${usingPlayer ? `
+                <div class="lms-transport" onclick="event.stopPropagation()">
+                    <button id="lms-playbtn-${i}" onclick="toggleLmsPlay(${i})" title="Play on ${escapeHtml(playerSelect.selectedOptions[0].text)}">${SVG_PLAY}</button>
+                    <input type="range" id="lms-seek-${i}" min="0" max="1000" value="0"
+                           oninput="lmsSeek(${i}, this.value)"
+                           onmousedown="lmsSeeking=true" onmouseup="lmsSeeking=false"
+                           ontouchstart="lmsSeeking=true" ontouchend="lmsSeeking=false">
+                    <span class="lms-time" id="lms-time-${i}">0:00 / 0:00</span>
+                </div>` : `<audio controls preload="metadata" src="${song.audio_url}"></audio>`}
             </div>
         `).join('');
 
@@ -354,7 +547,18 @@
             });
         }
 
-        document.getElementById('round-num').textContent = totalCount + sessionRound + 1;
+        document.getElementById('round-num').textContent = totalCount + 1;
+
+        // Restore selection state (e.g. after re-render due to player switch)
+        if (selectedOddOneOut) {
+            const idx = currentSongs.findIndex(s => s.file === selectedOddOneOut.file);
+            if (idx >= 0) {
+                document.getElementById(`radio-${idx}`).checked = true;
+                document.querySelectorAll('.song').forEach((el, j) => {
+                    el.classList.toggle('selected', j === idx);
+                });
+            }
+        }
     }
 
     // --- Select Song ---
@@ -379,26 +583,28 @@
         btn.textContent = 'Saving...';
 
         // The two similar songs are the ones NOT selected
-        const similar = currentSongs.filter(s => s.rowid !== selectedOddOneOut.rowid);
+        const similar = currentSongs.filter(s => s.file !== selectedOddOneOut.file);
 
         try {
             const resp = await fetch(API_BASE, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    song_1_id: similar[0].rowid,
-                    song_2_id: similar[1].rowid,
-                    odd_one_out_id: selectedOddOneOut.rowid
+                    song_1: similar[0].file,
+                    song_2: similar[1].file,
+                    odd_one_out: selectedOddOneOut.file
                 })
             });
             const data = await resp.json();
             if (data.ok) {
                 sessionRound++;
-                totalCount = data.count;
+                totalCount = Number(data.count);
                 document.getElementById('triplet-count').textContent = `${totalCount} triplets recorded`;
                 // Stop all audio before loading next round
                 document.querySelectorAll('audio').forEach(a => { a.pause(); a.src = ''; });
-                // Stop LMS player if active
+                // Stop LMS player and polling if active
+                stopLmsPolling();
+                lmsActiveSong = -1;
                 if (playerSelect.value) {
                     lmsRequest(playerSelect.value, ['stop']).catch(() => {});
                 }
@@ -413,6 +619,18 @@
             btn.disabled = false;
             btn.textContent = 'Submit odd one out';
         }
+    }
+
+    // --- Skip Round ---
+    async function skipRound() {
+        // Stop all audio before loading next round
+        document.querySelectorAll('audio').forEach(a => { a.pause(); a.src = ''; });
+        stopLmsPolling();
+        lmsActiveSong = -1;
+        if (playerSelect.value) {
+            lmsRequest(playerSelect.value, ['stop']).catch(() => {});
+        }
+        await loadSongs();
     }
 
     // --- Utility ---

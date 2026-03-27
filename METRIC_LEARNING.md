@@ -87,7 +87,7 @@ flowchart LR
 3. `Survey.pm` queries `TracksV2` in `bliss.db`, resolves each file to an LMS
    track object, returns JSON with `title`, `artist`, `album`, `audio_url`.
 4. Browser renders 3 `<audio>` elements.  User listens, selects the odd one out.
-5. JS POSTs `{song_1_id, song_2_id, odd_one_out_id}` to `/blissmixer/survey-api`.
+5. JS POSTs `{song_1, song_2, odd_one_out}` (file paths) to `/blissmixer/survey-api`.
 6. `Survey.pm` appends the triplet to `training_triplets.json` and returns the
    new total count.
 7. JS auto-loads the next round.
@@ -101,8 +101,8 @@ flowchart LR
    process via `Proc::Background`.
 4. `bliss-learner` sends progress notifications to LMS via JSON-RPC so the
    settings page can display live status updates.
-5. `bliss-learner` loads triplets from `training_triplets.json`, fetches the
-   corresponding 23 bliss features from `bliss.db`, runs 5-fold
+5. `bliss-learner` loads triplets from `training_triplets.json`, looks up the
+   corresponding 23 bliss features in `bliss.db` by file path, runs 5-fold
    cross-validation over a lambda grid, trains a final model on all data,
    and writes `learned_matrix.json`.
 6. On completion (detected via `FINISHED` notification), `Survey.pm` calls
@@ -130,11 +130,12 @@ Training triplets are stored as a JSON file at
 3-element arrays:
 
 ```json
-[[song1_rowid, song2_rowid, odd_one_out_rowid], ...]
+[["path/to/song1.mp3", "path/to/song2.mp3", "path/to/odd_one_out.mp3"], ...]
 ```
 
-Each integer references a `rowid` in the `TracksV2` table of `bliss.db`
-(the 23-column bliss feature table populated by bliss-analyser).
+Each string is a file path matching the `File` column in the `TracksV2` table
+of `bliss.db`.  Using file paths (rather than database row IDs) ensures
+triplets survive a full rebuild of `bliss.db`.
 
 `Survey.pm` manages this file directly — loading with `_loadTriplets()`,
 appending new entries, and saving with `_saveTriplets()`.
@@ -217,4 +218,4 @@ All actions are dispatched via:
 | `status` | Returns triplet count, matrix existence, learning state. |
 | `run-learning` | Launches `bliss-learner` as a background process. |
 | `stop-learning` | Kills the learning process. |
-| `clear-triplets` | Deletes `training_triplets.json`. |
+| `clear-training-data` | Deletes `training_triplets.json` and the learned matrix file, then restarts bliss-mixer. |
