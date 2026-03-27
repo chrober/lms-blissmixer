@@ -186,6 +186,7 @@ sub _handleGetSongs {
                     title     => $title || 'Unknown Title',
                     artist    => $artist || 'Unknown Artist',
                     album     => $album || 'Unknown Album',
+                    year      => $trackObj->year || 0,
                     audio_url => "/music/" . $trackObj->id . "/download",
                     track_id  => int($trackObj->id),
                 };

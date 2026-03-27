@@ -518,7 +518,7 @@
                     <div class="song-meta">
                         <div class="song-title">${escapeHtml(song.title)}</div>
                         <div class="song-artist">${escapeHtml(song.artist)}</div>
-                        <div class="song-album">${escapeHtml(song.album)}</div>
+                        <div class="song-album">${escapeHtml(song.album)}${song.year ? ' (' + song.year + ')' : ''}</div>
                     </div>
                 </div>
                 ${usingPlayer ? `

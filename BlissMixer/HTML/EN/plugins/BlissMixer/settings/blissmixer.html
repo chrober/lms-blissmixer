@@ -494,7 +494,7 @@
     }
 
     function clearTrainingData() {
-        if (confirm('This will permanently delete:\n\n&bull; All survey triplets (your "odd one out" answers)\n&bull; The learned distance matrix\n\nThis cannot be undone. Continue?')) {
+        if (confirm('This will permanently delete:\n\n- All survey triplets (your "odd one out" answers)\n- The learned distance matrix\n\nThis cannot be undone. Continue?')) {
             sendSurveyMsg('clear-training-data').then(() => getSurveyStatus());
         }
     }
