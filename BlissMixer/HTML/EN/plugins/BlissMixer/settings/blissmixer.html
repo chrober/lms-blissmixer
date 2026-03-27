@@ -174,18 +174,7 @@
         [% END %]
 
         [% WRAPPER settingGroup title="BLISSMIXER_LEARNED_BLEND" desc="BLISSMIXER_LEARNED_BLEND_DESC" %]
-        <div style="display:flex;align-items:center;gap:8px">
-            <span style="opacity:0.6;font-size:90%">Variance</span>
-            <input type="range" min="0" max="100" step="1" id="learned_blend_range"
-                   value="[% prefs.learned_blend %]"
-                   oninput="document.getElementById('learned_blend').value=this.value"
-                   style="flex:1;max-width:200px">
-            <span style="opacity:0.6;font-size:90%">Learned</span>
-            <input type="number" min="0" max="100" class="stdedit" name="pref_learned_blend"
-                   id="learned_blend" value="[% prefs.learned_blend %]" size="4"
-                   oninput="document.getElementById('learned_blend_range').value=this.value">
-            <span id="blend-status" style="opacity:0.6"></span>
-        </div>
+        <input type="number" min="0" max="100" class="stdedit sliderInput_0_100_1" name="pref_learned_blend" id="learned_blend" value="[% prefs.learned_blend %]" size="5">
         [% END %]
         </div>
 
@@ -205,7 +194,7 @@
         </table><br/>
 
         <button id="learning-btn" onclick="toggleLearning()" type="button" style="margin-bottom:16px">[% run_learning_text %]</button>
-        <button id="clear-triplets-btn" onclick="clearTriplets()" type="button" style="margin-left:8px;margin-bottom:16px">[% clear_triplets_text %]</button>
+        <button id="clear-triplets-btn" onclick="clearTrainingData()" type="button" style="margin-left:8px;margin-bottom:16px">[% clear_triplets_text %]</button>
         <div id="learning-status" style="margin-top:8px"></div>
         [% END %]
         </div>
@@ -427,11 +416,9 @@
 
             let hasMatrix = (undefined!=r.matrix_exists && 1==parseInt(r.matrix_exists));
             let blendInput = document.getElementById('learned_blend');
-            let blendRange = document.getElementById('learned_blend_range');
-            let blendStatus = document.getElementById('blend-status');
+            let blendRange = document.getElementById('mskslider.learned_blend');
             if (undefined!=blendInput) blendInput.disabled = !hasMatrix;
             if (undefined!=blendRange) blendRange.disabled = !hasMatrix;
-            if (undefined!=blendStatus) blendStatus.textContent = hasMatrix ? '' : '(no learned matrix available)';
 
             let btn = document.getElementById('learning-btn');
             let clearBtn = document.getElementById('clear-triplets-btn');
@@ -506,9 +493,9 @@
         });
     }
 
-    function clearTriplets() {
-        if (confirm('Delete all training data? This cannot be undone.')) {
-            sendSurveyMsg('clear-triplets').then(() => getSurveyStatus());
+    function clearTrainingData() {
+        if (confirm('This will permanently delete:\n\n&bull; All survey triplets (your "odd one out" answers)\n&bull; The learned distance matrix\n\nThis cannot be undone. Continue?')) {
+            sendSurveyMsg('clear-training-data').then(() => getSurveyStatus());
         }
     }
 

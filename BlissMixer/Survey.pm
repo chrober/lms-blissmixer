@@ -105,8 +105,8 @@ sub cliCommand {
         _stopLearning();
         $request->addResult("msg", "stopped");
         $request->setStatusDone();
-    } elsif ($act eq 'clear-triplets') {
-        _clearTriplets();
+    } elsif ($act eq 'clear-training-data') {
+        _clearTrainingData();
         $request->addResult("msg", "cleared");
         $request->setStatusDone();
     } else {
@@ -182,10 +182,12 @@ sub _handleGetSongs {
             if (blessed $trackObj) {
                 push @songs, {
                     rowid     => int($rowid),
+                    file      => $file,
                     title     => $title || 'Unknown Title',
                     artist    => $artist || 'Unknown Artist',
                     album     => $album || 'Unknown Album',
                     audio_url => "/music/" . $trackObj->id . "/download",
+                    track_id  => int($trackObj->id),
                 };
             }
         }
@@ -225,18 +227,18 @@ sub _handlePostTriplet {
         return;
     }
 
-    my $song1 = $data->{song_1_id};
-    my $song2 = $data->{song_2_id};
-    my $oddOneOut = $data->{odd_one_out_id};
+    my $song1 = $data->{song_1};
+    my $song2 = $data->{song_2};
+    my $oddOneOut = $data->{odd_one_out};
 
     if (!$song1 || !$song2 || !$oddOneOut) {
-        _sendJson($httpClient, $response, RC_BAD_REQUEST, {error => "Missing song IDs"});
+        _sendJson($httpClient, $response, RC_BAD_REQUEST, {error => "Missing song file paths"});
         return;
     }
 
     eval {
         my $triplets = _loadTriplets();
-        push @$triplets, [int($song1), int($song2), int($oddOneOut)];
+        push @$triplets, [$song1, $song2, $oddOneOut];
         _saveTriplets($triplets);
     };
     if ($@) {
@@ -367,11 +369,18 @@ sub _countTriplets {
     return scalar @$triplets;
 }
 
-sub _clearTriplets {
+sub _clearTrainingData {
     if (-e $tripletsPath) {
         unlink $tripletsPath;
+        main::INFOLOG && $log->info("Survey: deleted training triplets ($tripletsPath)");
     }
-    main::INFOLOG && $log->info("Survey: cleared all training triplets");
+    if (-e $matrixPath) {
+        unlink $matrixPath;
+        main::INFOLOG && $log->info("Survey: deleted learned matrix ($matrixPath)");
+        # Restart bliss-mixer so it stops using the old matrix
+        Plugins::BlissMixer::Plugin::_stopMixer();
+        main::INFOLOG && $log->info("bliss-mixer stopped; will restart without matrix on next mix request");
+    }
 }
 
 sub _sendJson {

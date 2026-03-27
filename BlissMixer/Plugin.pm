@@ -1190,21 +1190,32 @@ sub _dstmMix {
                         if (scalar @$tracks > 0) {
                             $cb->($client, $tracks);
 
-                            # Fire "what-if" comparison requests (debug only, dynamic weights only)
+                            # Fire "what-if" comparison requests (debug only, adaptive weights only)
                             if (main::DEBUGLOG && $useAdaptiveWeights) {
                                 my $prevRef = $previousTracks ? \@$previousTracks : undef;
                                 if (scalar @staticCompSeeds > 0) {
-                                    my $staticJson = _buildComparisonJson(\@staticCompSeeds, $prevRef, $dstm_tracks, $filterGenres, 0, 0);
+                                    my $staticJson = _buildComparisonJson(\@staticCompSeeds, $prevRef, $dstm_tracks, $filterGenres, 0, 0, 0);
                                     my $staticDesc = sprintf("static weights (Tempo=%d/Timbre=%d/Loudness=%d/Chroma=%d)",
                                         int($prefs->get('weight_tempo') || 4), int($prefs->get('weight_timbre') || 30),
                                         int($prefs->get('weight_loudness') || 9), int($prefs->get('weight_chroma') || 57));
                                     _fireComparisonRequest($url, $staticDesc, $staticJson);
                                 }
                                 if (scalar @eifCompSeeds >= 4) {
-                                    my $eifJson = _buildComparisonJson(\@eifCompSeeds, $prevRef, $dstm_tracks, $filterGenres, 1, 0);
+                                    my $eifJson = _buildComparisonJson(\@eifCompSeeds, $prevRef, $dstm_tracks, $filterGenres, 1, 0, 0);
                                     _fireComparisonRequest($url, "extended isolation forest", $eifJson);
                                 } else {
                                     $log->debug('Comparison for "extended isolation forest" skipped (needs >= 4 seeds, have ' . scalar(@eifCompSeeds) . ')');
+                                }
+                                # Pure variance-based (no learned matrix influence) — skip if already at blend=0%
+                                my $currentBlend = int($prefs->get('learned_blend') // 50);
+                                if ($currentBlend != 0) {
+                                    my $varianceJson = _buildComparisonJson(\@seedsToUse, $prevRef, $dstm_tracks, $filterGenres, 0, 1, 0);
+                                    _fireComparisonRequest($url, "adaptive weighting (pure variance, blend=0%)", $varianceJson);
+                                }
+                                # Pure learned-matrix (full learned matrix influence) — skip if already at blend=100%
+                                if ($currentBlend != 100) {
+                                    my $learnedJson = _buildComparisonJson(\@seedsToUse, $prevRef, $dstm_tracks, $filterGenres, 0, 1, 100);
+                                    _fireComparisonRequest($url, "adaptive weighting (pure learned, blend=100%)", $learnedJson);
                                 }
                             }
                         } else {
@@ -1353,7 +1364,7 @@ sub _getListData {
 # Build a comparison request JSON with explicit forest/adaptiveweights overrides
 # (used for "what-if" debug logging when adaptive weights is active)
 sub _buildComparisonJson {
-    my ($seedTracks, $previousTracks, $trackCount, $filterGenres, $forest, $adaptiveweights) = @_;
+    my ($seedTracks, $previousTracks, $trackCount, $filterGenres, $forest, $adaptiveweights, $learnedblend) = @_;
     my @tracks = ref $seedTracks ? @$seedTracks : ($seedTracks);
     my @track_paths = ();
     my @previous_paths = ();
@@ -1389,6 +1400,7 @@ sub _buildComparisonJson {
                         norepalb    => int($prefs->get('no_repeat_album')),
                         forest      => int($forest),
                         adaptiveweights => int($adaptiveweights),
+                        learnedblend => int($learnedblend // 0),
                         genregroups => _genreGroups(),
                         allgenres   => int($prefs->get('match_all_genres') || 0),
                     });
