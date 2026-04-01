@@ -159,7 +159,6 @@
         [% WRAPPER settingGroup title="BLISSMIXER_METRIC_CHROMA" %]
         <input type="number" min="1" max="100" class="stdedit sliderInput_1_100_1" name="pref_weight_chroma" id="weight_chroma" value="[% prefs.weight_chroma %]" size="5">
         [% END %]
-        </div>
 
         <br/><hr style="opacity:0.4" class="sub-sep"/><br/>
         <b style="font-size:120%">[% "BLISSMIXER_DYNAMIC_SECTION" | string %]</b><br/><br/>
@@ -176,9 +175,10 @@
         [% WRAPPER settingGroup title="BLISSMIXER_LEARNED_BLEND" desc="BLISSMIXER_LEARNED_BLEND_DESC" %]
         <input type="number" min="0" max="100" class="stdedit sliderInput_0_100_1" name="pref_learned_blend" id="learned_blend" value="[% prefs.learned_blend %]" size="5">
         [% END %]
-        </div>
 
         <br/><hr style="opacity:0.4" class="sub-sep"/><br/>
+        </div>
+
         <b style="font-size:125%" id="learning-section-header" class="hidden-section" onclick="toggleSection('learning-section')">[% "BLISSMIXER_LEARNING_SECTION" | string %]</b><br/><br/>
         <div id="learning-section" class="hidden">
         [% IF no_learner_binary %]
