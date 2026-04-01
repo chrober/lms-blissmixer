@@ -72,6 +72,7 @@ sub beforeRender {
     $paramRef->{'learning_start_text'} = string('BLISSMIXER_LEARNING_START_TIME');
     $paramRef->{'learning_duration_text'} = string('BLISSMIXER_LEARNING_DURATION');
     $paramRef->{'learning_status_text'} = string('BLISSMIXER_LEARNING_STATUS');
+    $paramRef->{'learning_failed_text'} = string('BLISSMIXER_LEARNING_FAILED');
     my $learnerBinary = Slim::Utils::Misc::findbin('bliss-learner');
     $paramRef->{'no_learner_binary'} = !$learnerBinary;
 }

@@ -350,3 +350,6 @@ BLISSMIXER_LEARNING_DURATION
 
 BLISSMIXER_LEARNING_STATUS
 	EN	Status:
+
+BLISSMIXER_LEARNING_FAILED
+	EN	Learning failed unexpectedly. Check the Lyrion server log for details.

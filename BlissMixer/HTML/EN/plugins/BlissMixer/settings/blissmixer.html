@@ -439,6 +439,9 @@
             if (undefined!=statusEl) {
                 // Don't overwrite a sticky error message unless learning is now running
                 if (learningIsRunning) learningErrorMsg = null;
+                if (!learningIsRunning && undefined!=r.failed && 1==parseInt(r.failed)) {
+                    learningErrorMsg = "[% learning_failed_text %]";
+                }
                 if (learningErrorMsg) {
                     statusEl.textContent = learningErrorMsg;
                 } else {
