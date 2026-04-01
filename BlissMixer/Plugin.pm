@@ -1191,18 +1191,20 @@ sub _dstmMix {
                             $cb->($client, $tracks);
 
                             # Fire "what-if" comparison requests (debug only, adaptive weights only)
+                            # Queued and fired sequentially to avoid overwhelming bliss-mixer
                             if (main::DEBUGLOG && $useAdaptiveWeights) {
                                 my $prevRef = $previousTracks ? \@$previousTracks : undef;
+                                my @compQueue = ();
                                 if (scalar @staticCompSeeds > 0) {
                                     my $staticJson = _buildComparisonJson(\@staticCompSeeds, $prevRef, $dstm_tracks, $filterGenres, 0, 0, 0);
                                     my $staticDesc = sprintf("static weights (Tempo=%d/Timbre=%d/Loudness=%d/Chroma=%d)",
                                         int($prefs->get('weight_tempo') || 4), int($prefs->get('weight_timbre') || 30),
                                         int($prefs->get('weight_loudness') || 9), int($prefs->get('weight_chroma') || 57));
-                                    _fireComparisonRequest($url, $staticDesc, $staticJson);
+                                    push @compQueue, [$url, $staticDesc, $staticJson];
                                 }
                                 if (scalar @eifCompSeeds >= 4) {
                                     my $eifJson = _buildComparisonJson(\@eifCompSeeds, $prevRef, $dstm_tracks, $filterGenres, 1, 0, 0);
-                                    _fireComparisonRequest($url, "extended isolation forest", $eifJson);
+                                    push @compQueue, [$url, "extended isolation forest", $eifJson];
                                 } else {
                                     $log->debug('Comparison for "extended isolation forest" skipped (needs >= 4 seeds, have ' . scalar(@eifCompSeeds) . ')');
                                 }
@@ -1210,13 +1212,14 @@ sub _dstmMix {
                                 my $currentBlend = int($prefs->get('learned_blend') // 50);
                                 if ($currentBlend != 0) {
                                     my $varianceJson = _buildComparisonJson(\@seedsToUse, $prevRef, $dstm_tracks, $filterGenres, 0, 1, 0);
-                                    _fireComparisonRequest($url, "adaptive weighting (pure variance, blend=0%)", $varianceJson);
+                                    push @compQueue, [$url, "adaptive weighting (pure variance, blend=0%)", $varianceJson];
                                 }
                                 # Pure learned-matrix (full learned matrix influence) — skip if already at blend=100%
                                 if ($currentBlend != 100) {
                                     my $learnedJson = _buildComparisonJson(\@seedsToUse, $prevRef, $dstm_tracks, $filterGenres, 0, 1, 100);
-                                    _fireComparisonRequest($url, "adaptive weighting (pure learned, blend=100%)", $learnedJson);
+                                    push @compQueue, [$url, "adaptive weighting (pure learned, blend=100%)", $learnedJson];
                                 }
+                                _fireComparisonQueue(\@compQueue) if @compQueue;
                             }
                         } else {
                             _mixFailed($client, $cb, $numSpot);
@@ -1406,9 +1409,14 @@ sub _buildComparisonJson {
                     });
 }
 
-# Fire an async comparison request and log the results (debug only, never affects the queue)
-sub _fireComparisonRequest {
-    my ($url, $strategyName, $jsonData) = @_;
+# Fire comparison requests sequentially (each waits for the previous to finish)
+sub _fireComparisonQueue {
+    my $queue = shift;
+    return unless @$queue;
+
+    my $entry = shift @$queue;
+    my ($url, $strategyName, $jsonData) = @$entry;
+
     Slim::Networking::SimpleAsyncHTTP->new(
         sub {
             my $response = shift;
@@ -1421,10 +1429,14 @@ sub _fireComparisonRequest {
                     $log->debug("  " . $trackObj->path);
                 }
             }
+            # Fire next comparison in queue
+            _fireComparisonQueue($queue);
         },
         sub {
             my $response = shift;
             $log->debug("Comparison request for \"${strategyName}\" failed: " . $response->error);
+            # Continue with next even on failure
+            _fireComparisonQueue($queue);
         }
     )->post($url, 'Content-Type' => 'application/json;charset=utf-8', $jsonData);
 }
