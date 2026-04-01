@@ -40,6 +40,7 @@ my $learner;
 my $lastLearnerMsg = "";
 my $learningStartTime = 0;
 my $learningEndTime = 0;
+my $learnerFailed = 0;
 
 use constant LEARNER_FINISHED_MSG => "FINISHED";
 use constant CHECK_LEARNER_TIME => 60;
@@ -71,11 +72,19 @@ sub cliCommand {
         my $count = _countTriplets();
         my $matrixExists = (-e $matrixPath) ? 1 : 0;
         my $running = ($learner && $learner->alive) ? 1 : 0;
+        # Detect crash in real-time: process was started, is no longer alive, and never finished
+        if (!$running && $learner && $lastLearnerMsg ne LEARNER_FINISHED_MSG && $learningEndTime == 0) {
+            $learnerFailed = 1;
+            _learningEnded();
+        }
         $request->addResult("triplets", $count);
         $request->addResult("matrix_exists", $matrixExists);
         $request->addResult("learning", $running);
         if ($running) {
             $request->addResult("msg", $lastLearnerMsg);
+        }
+        if ($learnerFailed) {
+            $request->addResult("failed", 1);
         }
         if ($learningStartTime > 0) {
             $request->addResult("start", $learningStartTime);
@@ -272,6 +281,7 @@ sub _startLearning {
     $lastLearnerMsg = "";
     $learningStartTime = time();
     $learningEndTime = 0;
+    $learnerFailed = 0;
 
     my $httpPort = preferences('server')->get('httpport') || 9000;
 
@@ -343,6 +353,7 @@ sub _checkLearner {
         if ($elapsed > MIN_LEARNER_RUN_TIME) {
             $log->warn("Survey: bliss-learner exited unexpectedly after ${elapsed}s");
         }
+        $learnerFailed = 1;
         _learningEnded();
     }
 
