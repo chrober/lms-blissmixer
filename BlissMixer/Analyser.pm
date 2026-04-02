@@ -78,6 +78,7 @@ sub init {
     if ($analysisEndTimeCfg) {
         $analysisEndTime = $analysisEndTimeCfg;
     }
+     _countTracksInDb(1);
     Slim::Web::Pages->addRawFunction($FAILURE_URL_RE, \&_failuresHandler);
 }
 
