@@ -2,6 +2,7 @@
 -----
 1. Fix detecting of radio station as last iten in queue.
 2. Use min/max duration to filter seed tracks.
+3. Fix showing of 'ignored' count in settings.
 
 0.9.0
 -----
