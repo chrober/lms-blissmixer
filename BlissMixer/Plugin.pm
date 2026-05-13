@@ -101,6 +101,7 @@ sub initPlugin {
         num_seed_tracks  => 3,
         seed_strict_order => 1,
         learned_blend    => 50,
+        use_lastfm_rerank => 0,
         run_analyser_after_scan => 0,
         analysis_read_tags => 0,
         analysis_write_tags => 0,
@@ -1088,7 +1089,11 @@ sub _dstmMix {
             }
 
             my $dstm_tracks = $prefs->get('dstm_tracks') || DEF_NUM_DSTM_TRACKS;
-            my $jsonData = _getMixData(\@seedsToUse, $previousTracks ? \@$previousTracks : undef, $dstm_tracks, 1, $filterGenres);
+            my $lastfmRerank = $useAdaptiveWeights && $prefs->get('use_lastfm_rerank')
+                && exists $INC{'Plugins/LastMix/LFM.pm'};
+            my $requestCount = $lastfmRerank ? $dstm_tracks * 3 : $dstm_tracks;
+            my $shuffle = $lastfmRerank ? 0 : 1;
+            my $jsonData = _getMixData(\@seedsToUse, $previousTracks ? \@$previousTracks : undef, $requestCount, $shuffle, $filterGenres);
             my $port = $mixerPort || 12000;
             my $url = "http://localhost:$port/api/mix";
             main::DEBUGLOG && $log->debug("URL: ${url}");
@@ -1171,12 +1176,14 @@ sub _dstmMix {
                     my @songs = split(/\n/, $response->content);
                     my $count = scalar @songs;
                     my $tracks = ();
+                    my @trackObjs = ();
                     my $mediaDirs = Slim::Utils::Misc::getMediaDirs('audio');
 
                     for (my $j = 0; $j < $count; $j++) {
                         my $trackObj = _pathToTrack($mediaDirs, $songs[$j]);
                         if (blessed $trackObj) {
                             push @$tracks, $trackObj->url;
+                            push @trackObjs, $trackObj;
                             main::DEBUGLOG && $log->debug("  " . $trackObj->path);
                         } else {
                             $log->error('API attempted to mix in a song at ' . $songs[$j] . ' that can\'t be found at that location');
@@ -1188,7 +1195,14 @@ sub _dstmMix {
                     } else {
                         main::DEBUGLOG && $log->debug("Num tracks to use:" . scalar(@$tracks));
                         if (scalar @$tracks > 0) {
-                            $cb->($client, $tracks);
+                            if ($lastfmRerank) {
+                                _rerankViaLastFm(\@seedsToUse, \@trackObjs, $dstm_tracks, sub {
+                                    my $rerankedUrls = shift;
+                                    $cb->($client, $rerankedUrls);
+                                });
+                            } else {
+                                $cb->($client, $tracks);
+                            }
 
                             # Fire "what-if" comparison requests (debug only, adaptive weights only)
                             # Queued and fired sequentially to avoid overwhelming bliss-mixer
@@ -1237,6 +1251,154 @@ sub _dstmMix {
             _mixFailed($client, $cb, $numSpot);
         }
     }
+}
+
+sub _rerankViaLastFm {
+    my ($seeds, $trackObjs, $finalCount, $cb) = @_;
+
+    main::DEBUGLOG && $log->debug("Last.fm re-ranking: querying for " . scalar(@$seeds) . " seed tracks");
+
+    my @seedInfo;
+    foreach my $seed (@$seeds) {
+        push @seedInfo, {
+            artist      => $seed->artistName,
+            title       => $seed->title,
+            mbid        => $seed->musicbrainz_id,
+            artist_mbid => ($seed->artist ? $seed->artist->musicbrainz_id : undef),
+        };
+    }
+
+    my %lastfmTracks;
+    my %lastfmArtists;
+
+    _fetchSimilarTracksForSeeds([@seedInfo], \%lastfmTracks, sub {
+        main::DEBUGLOG && $log->debug("Last.fm similar tracks: " . scalar(keys %lastfmTracks) . " unique tracks collected");
+
+        _fetchSimilarArtistsForSeeds([@seedInfo], \%lastfmArtists, sub {
+            main::DEBUGLOG && $log->debug("Last.fm similar artists: " . scalar(keys %lastfmArtists) . " unique artists collected");
+
+            my (@groupA, @groupB, @groupC);
+            foreach my $trackObj (@$trackObjs) {
+                my $key = _lastfmNormalizeKey($trackObj->artistName, $trackObj->title);
+                my $artistKey = _lastfmNormalizeArtist($trackObj->artistName);
+
+                if (exists $lastfmTracks{$key}) {
+                    push @groupA, $trackObj;
+                } elsif (exists $lastfmArtists{$artistKey}) {
+                    push @groupB, $trackObj;
+                } else {
+                    push @groupC, $trackObj;
+                }
+            }
+
+            my @final = (@groupA, @groupB, @groupC);
+            splice(@final, $finalCount) if scalar @final > $finalCount;
+
+            main::DEBUGLOG && $log->debug(sprintf(
+                "Last.fm re-ranking: %d track-confirmed, %d artist-confirmed, %d bliss-only (of %d pool) -> returning %d",
+                scalar @groupA, scalar @groupB, scalar @groupC, scalar @$trackObjs, scalar @final));
+
+            if (main::DEBUGLOG) {
+                foreach my $t (@final) {
+                    my $key = _lastfmNormalizeKey($t->artistName, $t->title);
+                    my $artistKey = _lastfmNormalizeArtist($t->artistName);
+                    my $tier = exists $lastfmTracks{$key} ? 'track-confirmed' :
+                               exists $lastfmArtists{$artistKey} ? 'artist-confirmed' : 'bliss-only';
+                    $log->debug("  [$tier] " . $t->artistName . " - " . $t->title);
+                }
+            }
+
+            my $urls = [ map { $_->url } @final ];
+            $cb->($urls);
+        });
+    });
+}
+
+sub _fetchSimilarTracksForSeeds {
+    my ($seedInfo, $resultHash, $cb) = @_;
+
+    if (!@$seedInfo) {
+        $cb->();
+        return;
+    }
+
+    my $seed = shift @$seedInfo;
+    main::DEBUGLOG && $log->debug("Last.fm: getSimilarTracks for \"" . ($seed->{artist} // '') . " - " . ($seed->{title} // '') . "\"");
+
+    Plugins::LastMix::LFM->getSimilarTracks(sub {
+        my $results = shift;
+        if ($results && ref $results && $results->{similartracks} && ref $results->{similartracks}) {
+            my $tracks = $results->{similartracks}->{track};
+            if ($tracks && ref $tracks eq 'ARRAY') {
+                my $count = 0;
+                foreach my $t (@$tracks) {
+                    next unless $t->{artist} && $t->{artist}->{name};
+                    my $key = _lastfmNormalizeKey($t->{artist}->{name}, $t->{name});
+                    $resultHash->{$key} = 1;
+                    $count++;
+                }
+                main::DEBUGLOG && $log->debug("Last.fm: got $count similar tracks");
+            }
+        } else {
+            main::DEBUGLOG && $log->debug("Last.fm: no similar tracks returned");
+        }
+        _fetchSimilarTracksForSeeds($seedInfo, $resultHash, $cb);
+    }, {
+        artist => $seed->{artist},
+        title  => $seed->{title},
+        mbid   => $seed->{mbid},
+    });
+}
+
+sub _fetchSimilarArtistsForSeeds {
+    my ($seedInfo, $resultHash, $cb) = @_;
+
+    if (!@$seedInfo) {
+        $cb->();
+        return;
+    }
+
+    my $seed = shift @$seedInfo;
+    main::DEBUGLOG && $log->debug("Last.fm: getSimilarArtists for \"" . ($seed->{artist} // '') . "\"");
+
+    Plugins::LastMix::LFM->getSimilarArtists(sub {
+        my $results = shift;
+        if ($results && ref $results && $results->{similarartists} && ref $results->{similarartists}) {
+            my $artists = $results->{similarartists}->{artist};
+            if ($artists && ref $artists eq 'ARRAY') {
+                my $count = 0;
+                foreach my $a (@$artists) {
+                    next unless $a->{name};
+                    my $key = _lastfmNormalizeArtist($a->{name});
+                    $resultHash->{$key} = 1;
+                    $count++;
+                }
+                main::DEBUGLOG && $log->debug("Last.fm: got $count similar artists");
+            }
+        } else {
+            main::DEBUGLOG && $log->debug("Last.fm: no similar artists returned");
+        }
+        _fetchSimilarArtistsForSeeds($seedInfo, $resultHash, $cb);
+    }, {
+        artist => $seed->{artist},
+        mbid   => $seed->{artist_mbid},
+    });
+}
+
+sub _lastfmNormalizeKey {
+    my ($artist, $title) = @_;
+    my $a = _lastfmNormalizeArtist($artist);
+    my $t = lc($title // '');
+    $t =~ s/\s*[\(\[].*?[\)\]]\s*//g;
+    $t =~ s/^\s+|\s+$//g;
+    return "$a|$t";
+}
+
+sub _lastfmNormalizeArtist {
+    my $artist = shift;
+    my $a = lc($artist // '');
+    $a =~ s/^\s+|\s+$//g;
+    return $a;
 }
 
 sub prefName {
