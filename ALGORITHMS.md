@@ -134,9 +134,9 @@ crate without pulling in heavy native audio libraries it never uses.
 </tr>
 <tr>
   <td><b>Artist shuffle</b></td>
-  <td>Yes</td>
-  <td>No</td>
-  <td>Yes</td>
+  <td>Yes — randomly picks among similarly-scored tracks of the same artist; controlled by the "No Repeat Artist" setting</td>
+  <td>No — results returned in strict anomaly-score order</td>
+  <td>Yes — same logic as Static Weights</td>
 </tr>
 <tr>
   <td><b>bliss-rs usage</b></td>
@@ -201,6 +201,17 @@ flowchart TD
   restarting the mixer process.
 - **Candidate pool:** Governed by `count × seeds × 50` (min 10,000). Only this
   many KD-tree results are evaluated per seed.
+- **Artist shuffle:** When "No Repeat Artist" (`norepart`) is enabled, the first
+  track accepted from an artist is stored and that artist is added to the
+  repeat-filter list. Any further tracks from the same artist that fall within
+  a tight similarity window (`MAX_ARTIST_TRACK_SIM_DIFF = 0.01` squared-Euclidean
+  distance) are collected into a per-artist pool of up to five candidates.
+  After all scoring is done, one track is **randomly chosen** from each pool and
+  replaces the originally picked track in the result list. This prevents the mix
+  from always selecting the single top-scored track from a frequently-matching
+  artist, adding variety while staying within the similarity range. The plugin
+  always sends `shuffle=1`; to suppress the randomisation, set "No Repeat Artist"
+  to `0`.
 
 ---
 
@@ -328,7 +339,9 @@ flowchart TD
   A diagonal weight matrix `W` is constructed where
   `W[i,i] = 1 / (variance_i + ε)`, so consistent features dominate the
   distance calculation.
-- **Artist shuffle:** Same randomisation logic as Static Weights.
+- **Artist shuffle:** Identical logic to Static Weights — see the Artist shuffle
+  bullet in that section for the full description. The plugin always sends
+  `shuffle=1`; disable the effect by setting "No Repeat Artist" to `0`.
 - **Fallback:** With a single seed and no learned matrix, falls back to
   Static Weights.
 
@@ -378,6 +391,37 @@ have diverse tempos. The algorithm will prioritise finding tracks with matching
 harmonic content, largely ignoring tempo differences. Compare these metric group
 values directly against the static weight sliders (which default to
 Tempo=4, Timbre=30, Loudness=9, Chroma=57).
+
+### Last.fm re-ranking (optional)
+
+When enabled and the [LastMix](https://github.com/AF-1/lms-lastmix) plugin is
+installed, the adaptive weights pipeline adds a collaborative-filtering
+re-ranking step after bliss-mixer returns its acoustically-scored candidates:
+
+1. A larger candidate pool is requested from bliss-mixer (3× the final track
+   count, with shuffle disabled to get the strict top-N by distance).
+2. Last.fm is queried for similar tracks (`track.getSimilar`) and similar artists
+   (`artist.getSimilar`) based on the seed tracks.
+3. Bliss candidates are partitioned into three priority tiers:
+   - **Track-confirmed:** the exact track (artist + title) appears in Last.fm's
+     similar-tracks results
+   - **Artist-confirmed:** the track's artist appears in Last.fm's
+     similar-artists results
+   - **Bliss-only:** no Last.fm endorsement
+4. The final selection draws from the tiers in priority order (track → artist →
+   bliss-only).
+
+This means every returned track has passed bliss's acoustic quality gate (all
+are from the tightest Mahalanobis distance range), but tracks with
+collaborative-filtering endorsement are preferred. If Last.fm is unavailable or
+returns no matches, the result is identical to standard adaptive weighting.
+
+> **In plain English:** After bliss finds the 15 most similar-sounding tracks in
+> your library, it asks Last.fm "do other listeners think these are related to
+> what's playing?" Tracks that both *sound* right and are *crowd-approved* get
+> picked first. Tracks that only sound right fill the remaining slots. If
+> Last.fm has no opinion (niche music, API unavailable), bliss picks by pure
+> acoustic similarity as usual.
 
 ---
 

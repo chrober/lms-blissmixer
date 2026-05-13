@@ -198,6 +198,15 @@ BLISSMIXER_LEARNED_BLEND
 BLISSMIXER_LEARNED_BLEND_DESC
 	EN	When multiple seed tracks are used and a learned matrix is available, this controls how much the learned matrix influences the distance calculation. 0 = pure variance-based (ignore learned matrix), 100 = pure learned matrix (ignore variance). Default: 50.
 
+BLISSMIXER_LASTFM_RERANK
+	EN	Last.fm re-ranking
+
+BLISSMIXER_LASTFM_RERANK_DESC
+	EN	When enabled, bliss candidates are re-ranked using Last.fm collaborative filtering. Tracks confirmed by Last.fm's similar tracks or similar artists are prioritised over bliss-only candidates. Requires the LastMix plugin to be installed with a configured Last.fm account.
+
+BLISSMIXER_LASTFM_RERANK_UNAVAILABLE
+	EN	Requires the LastMix plugin to be installed and enabled.
+
 BLISSMIXER_USE_TRACK_GENRE
 	EN	Use track genre
 
