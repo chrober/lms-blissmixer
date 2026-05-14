@@ -308,7 +308,13 @@ flowchart TD
     N -- No --> P[Sort by similarity]
     O --> P
     P --> Q[Truncate to<br/>requested count]
-    Q --> R[Return track list]
+    Q --> R[Return track list<br/>to plugin]
+    R --> LFM{Last.fm weighted<br/>selection enabled?}
+    LFM -- No --> T[Final track list]
+    LFM -- Yes --> LFM1["Query Last.fm:<br/>getSimilarArtists for each seed<br/>(seed artists pre-endorsed)"]
+    LFM1 --> LFM2["Assign weights per candidate:<br/>endorsed artist → W (configurable)<br/>other artist → 1"]
+    LFM2 --> LFM3["Weighted random sample<br/>(Efraimidis–Spirakis)<br/>draw dstm_tracks from pool"]
+    LFM3 --> T[Final track list]
 
     style A fill:#e8f4f8,stroke:#2980b9,color:#1a3a4a
     style B fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
@@ -317,7 +323,10 @@ flowchart TD
     style K fill:#fef3c7,stroke:#f59e0b,color:#5c4813
     style J fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     style M fill:#fce4ec,stroke:#e74c3c,color:#5c1a1a
-    style R fill:#e8f5e9,stroke:#27ae60,color:#1a4a2a
+    style LFM1 fill:#f3e8ff,stroke:#7c3aed,color:#3b0764
+    style LFM2 fill:#f3e8ff,stroke:#7c3aed,color:#3b0764
+    style LFM3 fill:#f3e8ff,stroke:#7c3aed,color:#3b0764
+    style T fill:#e8f5e9,stroke:#27ae60,color:#1a4a2a
 ```
 
 ### Key characteristics
@@ -392,36 +401,41 @@ harmonic content, largely ignoring tempo differences. Compare these metric group
 values directly against the static weight sliders (which default to
 Tempo=4, Timbre=30, Loudness=9, Chroma=57).
 
-### Last.fm re-ranking (optional)
+### Last.fm weighted selection (optional)
 
 When enabled and the [LastMix](https://github.com/AF-1/lms-lastmix) plugin is
-installed, the adaptive weights pipeline adds a collaborative-filtering
-re-ranking step after bliss-mixer returns its acoustically-scored candidates:
+installed, the adaptive weights pipeline adds a weighted random selection step
+after bliss-mixer returns its acoustically-scored candidates:
 
-1. A larger candidate pool is requested from bliss-mixer (3× the final track
+1. A larger candidate pool is requested from bliss-mixer (10× the final track
    count, with shuffle disabled to get the strict top-N by distance).
-2. Last.fm is queried for similar tracks (`track.getSimilar`) and similar artists
-   (`artist.getSimilar`) based on the seed tracks.
-3. Bliss candidates are partitioned into three priority tiers:
-   - **Track-confirmed:** the exact track (artist + title) appears in Last.fm's
-     similar-tracks results
-   - **Artist-confirmed:** the track's artist appears in Last.fm's
-     similar-artists results
-   - **Bliss-only:** no Last.fm endorsement
-4. The final selection draws from the tiers in priority order (track → artist →
-   bliss-only).
+2. Last.fm is queried for similar artists (`artist.getSimilar`) based on each
+   seed track's artist. The seed artists themselves are also included in the
+   endorsed set.
+3. Each candidate is assigned a selection weight:
+   - **Artist-endorsed** (artist in Last.fm similar-artists set): weight = W
+     (configurable, default 5)
+   - **Non-endorsed** (artist not in set): weight = 1
+4. Final tracks are drawn via weighted random sampling without replacement
+   (Efraimidis–Spirakis algorithm: `key = rand() ** (1/weight)`, sort
+   descending, take top N). Endorsed-artist tracks are W× more likely to be
+   selected, but non-endorsed tracks can still be chosen.
 
-This means every returned track has passed bliss's acoustic quality gate (all
-are from the tightest Mahalanobis distance range), but tracks with
-collaborative-filtering endorsement are preferred. If Last.fm is unavailable or
-returns no matches, the result is identical to standard adaptive weighting.
+The larger pool (e.g. 50 tracks for dstm=5) ensures sufficient artist diversity
+for meaningful matches. Every returned track has passed bliss's acoustic quality
+gate — Last.fm only influences the *probability* of selection among those
+acoustically-similar tracks.
 
-> **In plain English:** After bliss finds the 15 most similar-sounding tracks in
-> your library, it asks Last.fm "do other listeners think these are related to
-> what's playing?" Tracks that both *sound* right and are *crowd-approved* get
-> picked first. Tracks that only sound right fill the remaining slots. If
-> Last.fm has no opinion (niche music, API unavailable), bliss picks by pure
-> acoustic similarity as usual.
+If Last.fm is unavailable or returns no matches, all tracks get weight=1 and the
+result is a random selection from the top-50 by Mahalanobis distance.
+
+> **In plain English:** After bliss finds the 50 most similar-sounding tracks in
+> your library, it asks Last.fm "which of these artists are related to what's
+> playing?" Tracks from crowd-approved related artists are more likely to be
+> picked (e.g. 5× more likely with default settings), but tracks from unknown
+> artists can still slip through. This prevents genre drift in heterogeneous
+> libraries while preserving variety and keeping bliss acoustic similarity as
+> the primary quality gate.
 
 ---
 
