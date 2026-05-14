@@ -1059,7 +1059,23 @@ sub _dstmMix {
 
         if (scalar @seedsToUse > 0) {
             if (main::INFOLOG) {
-                my $strategy = $useAdaptiveWeights ? 'adaptive weighting' : ($useForest ? 'extended isolation forest' : 'static weights');
+                my $strategy;
+                if ($useAdaptiveWeights) {
+                    my $blend = int($prefs->get('learned_blend') // 50);
+                    my $matrixFile = Plugins::BlissMixer::Survey::matrixPath();
+                    my $hasMatrix = $matrixFile && -e $matrixFile;
+                    my $lfm = $prefs->get('use_lastfm_rerank') && exists $INC{'Plugins/LastMix/LFM.pm'};
+                    my $blendDesc = !$hasMatrix || $blend == 0 ? 'pure variance-based'
+                                  : $blend == 100              ? 'pure learned matrix'
+                                  :                              "${blend}% learned matrix";
+                    my @details = ($blendDesc);
+                    push @details, 'Last.fm enabled' if $lfm;
+                    $strategy = 'adaptive weighting (' . join(', ', @details) . ')';
+                } elsif ($useForest) {
+                    $strategy = 'extended isolation forest';
+                } else {
+                    $strategy = 'static weights';
+                }
                 $log->info("Mixing strategy: $strategy");
                 # At debug level the upstream "Seed /path id:X" messages already list seeds
                 unless ($log->is_debug) {
