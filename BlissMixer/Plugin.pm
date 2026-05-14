@@ -47,7 +47,7 @@ use constant MAX_MIXER_START_CHECKS => 10;
 
 my $log = Slim::Utils::Log->addLogCategory({
     'category'     => 'plugin.blissmixer',
-    'defaultLevel' => 'ERROR',
+    'defaultLevel' => 'INFO',
     'logGroups'    => 'SCANNER',
 });
 
@@ -342,7 +342,7 @@ sub _startMixer {
     if ($matrixFile && -e $matrixFile) {
         push @params, "--matrix";
         push @params, $matrixFile;
-        main::DEBUGLOG && $log->debug("Using learned matrix: $matrixFile");
+        main::INFOLOG && $log->info("Using learned matrix: $matrixFile");
     }
     main::DEBUGLOG && $log->debug("Start mixer: $mixerBinary @params");
     eval { $mixer = Proc::Background->new({ 'die_upon_destroy' => 1 }, $mixerBinary, @params); };
@@ -1058,6 +1058,15 @@ sub _dstmMix {
         }
 
         if (scalar @seedsToUse > 0) {
+            if (main::INFOLOG) {
+                my $strategy = $useAdaptiveWeights ? 'adaptive weighting' : ($useForest ? 'extended isolation forest' : 'static weights');
+                $log->info("Mixing strategy: $strategy");
+                # At debug level the upstream "Seed /path id:X" messages already list seeds
+                unless ($log->is_debug) {
+                    $log->info("Seed: " . $_->artistName . " - " . $_->title) for @seedsToUse;
+                }
+            }
+
             my $maxNumPrevTracks = $prefs->get('no_repeat_track');
             if ($maxNumPrevTracks<0 || $maxNumPrevTracks>MAX_PREVIOUS_TRACKS) {
                 $maxNumPrevTracks = DEF_MAX_PREVIOUS_TRACKS;
@@ -1104,7 +1113,7 @@ sub _dstmMix {
                     main::DEBUGLOG && $log->debug("Received API response: " . ($response->headers->header('X-Bliss-Debug') || $response->content));
 
                     # Analyse and log dynamic weights debug info if returned by bliss-mixer
-                    if (main::DEBUGLOG) {
+                    if (main::INFOLOG) {
                         my $debugHeader = $response->headers->header('X-Bliss-Debug');
                         if ($debugHeader) {
                             eval {
@@ -1137,7 +1146,7 @@ sub _dstmMix {
                                         $eq_timbre   = 1 + $eq_timbre   * $eq_scale;
                                         $eq_loudness = 1 + $eq_loudness * $eq_scale;
                                         $eq_chroma   = 1 + $eq_chroma   * $eq_scale;
-                                        $log->debug(sprintf("Equivalent static sliders: Tempo=%.0f  Timbre=%.0f  Loudness=%.0f  Chroma=%.0f  (configured: %d/%d/%d/%d)",
+                                        $log->info(sprintf("Equivalent static sliders: Tempo=%.0f  Timbre=%.0f  Loudness=%.0f  Chroma=%.0f  (configured: %d/%d/%d/%d)",
                                             $eq_tempo, $eq_timbre, $eq_loudness, $eq_chroma,
                                             int($prefs->get('weight_tempo') || 4), int($prefs->get('weight_timbre') || 30),
                                             int($prefs->get('weight_loudness') || 9), int($prefs->get('weight_chroma') || 57)));
@@ -1148,15 +1157,15 @@ sub _dstmMix {
                                     my @top3    = @sorted[0..2];
                                     my @bottom3 = @sorted[-3..-1];
 
-                                    $log->debug("Strongest seed similarities (highest weight): "
+                                    $log->info("Strongest seed similarities (highest weight): "
                                         . join(", ", map { sprintf("%s=%.2f", $_->{feature}, $_->{weight}) } @top3));
-                                    $log->debug("Weakest seed similarities (lowest weight): "
+                                    $log->info("Weakest seed similarities (lowest weight): "
                                         . join(", ", map { sprintf("%s=%.2f", $_->{feature}, $_->{weight}) } @bottom3));
                                 }
 
                                 if ($dbg->{stats}) {
                                     my $s = $dbg->{stats};
-                                    $log->debug(sprintf("Stats: %d tracks in DB, %d scored, %d usable (discarded: dur=%d bpm=%d genre=%d xmas=%d album=%d; filtered: artist=%d album=%d title=%d)",
+                                    $log->info(sprintf("Stats: %d tracks in DB, %d scored, %d usable (discarded: dur=%d bpm=%d genre=%d xmas=%d album=%d; filtered: artist=%d album=%d title=%d)",
                                         $s->{db_total}, $s->{scored}, $s->{usable},
                                         $s->{discarded_duration}, $s->{discarded_bpm}, $s->{discarded_genre}, $s->{discarded_xmas}, $s->{discarded_album},
                                         $s->{filtered_artist}, $s->{filtered_album}, $s->{filtered_title}));
@@ -1202,6 +1211,7 @@ sub _dstmMix {
                                     $cb->($client, $rerankedUrls);
                                 });
                             } else {
+                                main::INFOLOG && $log->info("Selected tracks: " . join(", ", map { $_->artistName . " - " . $_->title } @trackObjs));
                                 $cb->($client, $tracks);
                             }
 
@@ -1259,20 +1269,34 @@ sub _selectViaLastFm {
 
     my @seedInfo;
     my %lastfmArtists;
+    my %seenArtists;
     my $weight = $prefs->get('lastfm_rerank_weight') || 5;
 
-    main::DEBUGLOG && $log->debug("Last.fm weighted selection: " . scalar(@$seeds) . " seeds, " . scalar(@$trackObjs) . " bliss candidates, weight=$weight, selecting $finalCount");
+    $log->debug("Last.fm weighted selection: " . scalar(@$seeds) . " seeds, " . scalar(@$trackObjs) . " bliss candidates, weight=$weight, selecting $finalCount");
 
     foreach my $seed (@$seeds) {
-        push @seedInfo, {
-            artist      => $seed->artistName,
-            artist_mbid => ($seed->artist ? $seed->artist->musicbrainz_id : undef),
-        };
-        $lastfmArtists{_lastfmNormalizeArtist($seed->artistName)} = 1;
+        my $key = _lastfmNormalizeArtist($seed->artistName);
+        $lastfmArtists{$key} = 1;
+        unless ($seenArtists{$key}++) {
+            push @seedInfo, {
+                artist      => $seed->artistName,
+                artist_mbid => ($seed->artist ? $seed->artist->musicbrainz_id : undef),
+            };
+        }
     }
 
     _fetchSimilarArtistsForSeeds([@seedInfo], \%lastfmArtists, sub {
-        main::DEBUGLOG && $log->debug("Last.fm: " . scalar(keys %lastfmArtists) . " endorsed artists (incl. seed artists)");
+        my $hadError = shift;
+
+        if ($hadError) {
+            main::INFOLOG && $log->info("Last.fm API error: falling back to pure bliss top-$finalCount tracks");
+            my $end = ($finalCount - 1 < $#{$trackObjs}) ? $finalCount - 1 : $#{$trackObjs};
+            my $urls = [ map { $_->url } @{$trackObjs}[0..$end] ];
+            $cb->($urls);
+            return;
+        }
+
+        main::INFOLOG && $log->info("Last.fm: " . scalar(keys %lastfmArtists) . " endorsed artists (incl. seed artists)");
 
         my @weighted;
         my ($endorsed_count, $rest_count) = (0, 0);
@@ -1287,14 +1311,14 @@ sub _selectViaLastFm {
         @weighted = sort { $b->{key} <=> $a->{key} } @weighted;
         splice(@weighted, $finalCount) if scalar @weighted > $finalCount;
 
-        main::DEBUGLOG && $log->debug(sprintf(
+        main::INFOLOG && $log->info(sprintf(
             "Last.fm selection: %d endorsed, %d non-endorsed in pool of %d (weight=%d) -> selected %d",
             $endorsed_count, $rest_count, scalar @$trackObjs, $weight, scalar @weighted));
 
-        if (main::DEBUGLOG) {
+        if (main::INFOLOG) {
             foreach my $entry (@weighted) {
                 my $tier = $entry->{endorsed} ? 'artist-endorsed' : 'bliss-only';
-                $log->debug("  [$tier] " . $entry->{track}->artistName . " - " . $entry->{track}->title);
+                $log->info("  [$tier] " . $entry->{track}->artistName . " - " . $entry->{track}->title);
             }
         }
 
@@ -1307,7 +1331,7 @@ sub _fetchSimilarArtistsForSeeds {
     my ($seedInfo, $resultHash, $cb) = @_;
 
     if (!@$seedInfo) {
-        $cb->();
+        $cb->(0);
         return;
     }
 
@@ -1316,7 +1340,12 @@ sub _fetchSimilarArtistsForSeeds {
 
     Plugins::LastMix::LFM->getSimilarArtists(sub {
         my $results = shift;
-        if ($results && ref $results && $results->{similarartists} && ref $results->{similarartists}) {
+        if ($results && ref $results && $results->{error}) {
+            $log->warn("Last.fm error for \"" . ($seed->{artist} // '') . "\": "
+                . ($results->{message} // "code " . $results->{error}));
+            $cb->(1);
+            return;
+        } elsif ($results && ref $results && $results->{similarartists} && ref $results->{similarartists}) {
             my $artists = $results->{similarartists}->{artist};
             if ($artists && ref $artists eq 'ARRAY') {
                 my $count = 0;
@@ -1326,10 +1355,13 @@ sub _fetchSimilarArtistsForSeeds {
                     $resultHash->{$key} = 1;
                     $count++;
                 }
-                main::DEBUGLOG && $log->debug("Last.fm: got $count similar artists");
+                main::INFOLOG && $log->info("Last.fm: got $count similar artists for \"" . ($seed->{artist} // '') . "\"");
+                if (main::DEBUGLOG) {
+                    $log->debug("  Last.fm similar artist: " . $_->{name}) for grep { $_->{name} } @$artists;
+                }
             }
         } else {
-            main::DEBUGLOG && $log->debug("Last.fm: no similar artists returned");
+            main::INFOLOG && $log->info("Last.fm: no similar artists returned for \"" . ($seed->{artist} // '') . "\"");
         }
         _fetchSimilarArtistsForSeeds($seedInfo, $resultHash, $cb);
     }, {
