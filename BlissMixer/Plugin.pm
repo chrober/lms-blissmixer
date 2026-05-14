@@ -102,7 +102,7 @@ sub initPlugin {
         seed_strict_order => 1,
         learned_blend    => 50,
         use_lastfm_rerank => 0,
-        lastfm_rerank_weight => 5,
+        lastfm_rerank_weight => 10,
         run_analyser_after_scan => 0,
         analysis_read_tags => 0,
         analysis_write_tags => 0,
@@ -1115,7 +1115,7 @@ sub _dstmMix {
             # Collect comparison seeds for "what-if" logging (debug only, adaptive weights only)
             my @staticCompSeeds = ();
             my @eifCompSeeds = ();
-            if (main::DEBUGLOG && $useAdaptiveWeights) {
+            if ($log->is_debug && $useAdaptiveWeights) {
                 my $staticSeedTracks = _getMixableProperties($client, NUM_SEED_TRACKS, 0);
                 if ($staticSeedTracks && ref $staticSeedTracks) {
                     foreach my $st (@$staticSeedTracks) {
@@ -1303,7 +1303,7 @@ sub _selectViaLastFm {
     my @seedInfo;
     my %lastfmArtists;
     my %seenArtists;
-    my $weight = $prefs->get('lastfm_rerank_weight') || 5;
+    my $weight = $prefs->get('lastfm_rerank_weight') || 10;
 
     $log->debug("Last.fm weighted selection: " . scalar(@$seeds) . " seeds, " . scalar(@$trackObjs) . " bliss candidates, weight=$weight, selecting $finalCount");
 
@@ -1322,8 +1322,17 @@ sub _selectViaLastFm {
         my $hadError = shift;
 
         if ($hadError) {
-            main::INFOLOG && $log->info("Last.fm API error: falling back to pure bliss top-$finalCount tracks");
+            my $poolSize = scalar @$trackObjs;
             my $end = ($finalCount - 1 < $#{$trackObjs}) ? $finalCount - 1 : $#{$trackObjs};
+            if (main::INFOLOG) {
+                $log->info("Last.fm API error: falling back to pure bliss top-$finalCount tracks");
+                $log->info(sprintf("Last.fm selection: 0 last.fm-endorsed, %d bliss-only in pool of %d (weight=%d) -> selected %d",
+                    $poolSize, $poolSize, $weight, $end + 1));
+                for my $i (0 .. $end) {
+                    $log->info("  [bliss-only, similarity-rank " . ($i + 1) . "/$poolSize] "
+                        . $trackObjs->[$i]->artistName . " - " . $trackObjs->[$i]->title);
+                }
+            }
             my $urls = [ map { $_->url } @{$trackObjs}[0..$end] ];
             $cb->($urls);
             return;

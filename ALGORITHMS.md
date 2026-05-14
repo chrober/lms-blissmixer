@@ -136,7 +136,7 @@ crate without pulling in heavy native audio libraries it never uses.
   <td><b>Artist shuffle</b></td>
   <td>Yes — randomly picks among similarly-scored tracks of the same artist; controlled by the "No Repeat Artist" setting</td>
   <td>No — results returned in strict anomaly-score order</td>
-  <td>Yes — same logic as Static Weights</td>
+  <td>Yes when Last.fm is disabled (same logic as Static Weights, shuffle=1). When Last.fm is enabled, shuffle=0 is used; variety comes from weighted sampling instead</td>
 </tr>
 <tr>
   <td><b>bliss-rs usage</b></td>
@@ -355,9 +355,13 @@ flowchart TD
   A diagonal weight matrix `W` is constructed where
   `W[i,i] = 1 / (variance_i + ε)`, so consistent features dominate the
   distance calculation.
-- **Artist shuffle:** Identical logic to Static Weights — see the Artist shuffle
-  bullet in that section for the full description. The plugin always sends
-  `shuffle=1`; disable the effect by setting "No Repeat Artist" to `0`.
+- **Artist shuffle:** When Last.fm weighted selection is disabled, identical logic
+  to Static Weights — see the Artist shuffle bullet in that section. The plugin
+  sends `shuffle=1` to bliss-mixer, enabling in-mixer randomisation. When Last.fm
+  is enabled, the plugin sends `shuffle=0` instead (strict distance order for the
+  full candidate pool); bliss-mixer's artist shuffle does not apply, and variety
+  comes from the Efraimidis–Spirakis weighted sampling step. Disable the
+  non-Last.fm shuffle by setting "No Repeat Artist" to `0`.
 - **Fallback:** With a single seed and no learned matrix, falls back to
   Static Weights.
 
@@ -421,7 +425,7 @@ after bliss-mixer returns its acoustically-scored candidates:
    endorsed set.
 3. Each candidate is assigned a selection weight:
    - **Artist-endorsed** (artist in Last.fm similar-artists set): weight = W
-     (configurable, default 5)
+     (configurable, default 10)
    - **Non-endorsed** (artist not in set): weight = 1
 4. Final tracks are drawn via weighted random sampling without replacement
    (Efraimidis–Spirakis algorithm: `key = rand() ** (1/weight)`, sort
@@ -433,13 +437,24 @@ for meaningful matches. Every returned track has passed bliss's acoustic quality
 gate — Last.fm only influences the *probability* of selection among those
 acoustically-similar tracks.
 
-If Last.fm is unavailable or returns no matches, all tracks get weight=1 and the
-result is a random selection from the top-50 by Mahalanobis distance.
+**No-repeat window inflation:** Because the bliss-mixer pool is 10× larger than
+usual, the artist/album repeat windows (`norepart`/`norepalb`) are inflated to
+`user_setting + requestCount − 1` when Last.fm is active, so the sliding exclusion
+window covers the entire pool rather than just the first few candidates. The
+plugin also fetches enough previous-track history to populate the inflated window,
+regardless of the "No Repeat Track" setting.
+
+If Last.fm returns an API error (e.g. rate limit), the plugin short-circuits the
+weighted sampling and returns the top-N candidates directly by Mahalanobis
+distance — no randomisation, no endorsement weighting. If Last.fm returns no
+similar artists for a seed (rather than an error), processing continues with
+weight=1 for all candidates from that seed's artist, and the weighted sampling
+runs normally over the full pool.
 
 > **In plain English:** After bliss finds the 50 most similar-sounding tracks in
 > your library, it asks Last.fm "which of these artists are related to what's
 > playing?" Tracks from crowd-approved related artists are more likely to be
-> picked (e.g. 5× more likely with default settings), but tracks from unknown
+> picked (e.g. 10× more likely with default settings), but tracks from unknown
 > artists can still slip through. This prevents genre drift in heterogeneous
 > libraries while preserving variety and keeping bliss acoustic similarity as
 > the primary quality gate.
