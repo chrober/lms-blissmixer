@@ -1119,7 +1119,17 @@ sub _dstmMix {
                 && exists $INC{'Plugins/LastMix/LFM.pm'};
             my $requestCount = $lastfmRerank ? $dstm_tracks * 10 : $dstm_tracks;
             my $shuffle = $lastfmRerank ? 0 : 1;
-            my $jsonData = _getMixData(\@seedsToUse, $previousTracks ? \@$previousTracks : undef, $requestCount, $shuffle, $filterGenres);
+            # Inflate norepart/norepalb to cover the full pool so the sliding window
+            # in bliss-mixer never scrolls past a recently-played artist/album as the
+            # large output list is built up (formula: user_setting + requestCount - 1)
+            my ($noRepArtOverride, $noRepAlbOverride);
+            if ($lastfmRerank) {
+                my $noRepArt = int($prefs->get('no_repeat_artist') || 0);
+                my $noRepAlb = int($prefs->get('no_repeat_album') || 0);
+                $noRepArtOverride = $noRepArt > 0 ? $noRepArt + $requestCount - 1 : undef;
+                $noRepAlbOverride = $noRepAlb > 0 ? $noRepAlb + $requestCount - 1 : undef;
+            }
+            my $jsonData = _getMixData(\@seedsToUse, $previousTracks ? \@$previousTracks : undef, $requestCount, $shuffle, $filterGenres, $noRepArtOverride, $noRepAlbOverride);
             my $port = $mixerPort || 12000;
             my $url = "http://localhost:$port/api/mix";
             main::DEBUGLOG && $log->debug("URL: ${url}");
@@ -1316,16 +1326,18 @@ sub _selectViaLastFm {
 
         my @weighted;
         my ($endorsed_count, $rest_count) = (0, 0);
-        foreach my $trackObj (@$trackObjs) {
+        my $poolSize = scalar @$trackObjs;
+        for my $i (0 .. $#$trackObjs) {
+            my $trackObj = $trackObjs->[$i];
             my $artistKey = _lastfmNormalizeArtist($trackObj->artistName);
             my $w = exists $lastfmArtists{$artistKey} ? $weight : 1;
             my $key = rand() ** (1.0 / $w);
-            push @weighted, { track => $trackObj, key => $key, endorsed => ($w > 1) };
+            push @weighted, { track => $trackObj, key => $key, endorsed => ($w > 1), rank => $i + 1 };
             if ($w > 1) { $endorsed_count++ } else { $rest_count++ }
         }
 
         @weighted = sort { $b->{key} <=> $a->{key} } @weighted;
-        splice(@weighted, $finalCount) if scalar @weighted > $finalCount;
+        splice(@weighted, $finalCount) if $poolSize > $finalCount;
 
         main::INFOLOG && $log->info(sprintf(
             "Last.fm selection: %d endorsed, %d non-endorsed in pool of %d (weight=%d) -> selected %d",
@@ -1334,7 +1346,8 @@ sub _selectViaLastFm {
         if (main::INFOLOG) {
             foreach my $entry (@weighted) {
                 my $tier = $entry->{endorsed} ? 'artist-endorsed' : 'bliss-only';
-                $log->info("  [$tier] " . $entry->{track}->artistName . " - " . $entry->{track}->title);
+                $log->info("  [$tier] " . $entry->{track}->artistName . " - " . $entry->{track}->title
+                    . " (rank=" . $entry->{rank} . "/$poolSize)");
             }
         }
 
@@ -1449,6 +1462,8 @@ sub _getMixData {
     my $trackCount = shift;
     my $shuffle = shift;
     my $filterGenres = shift;
+    my $noRepArtOverride = shift;
+    my $noRepAlbOverride = shift;
     my @tracks = ref $seedTracks ? @$seedTracks : ($seedTracks);
     my @previous = ref $previousTracks ? @$previousTracks : ($previousTracks);
     my @mix = ();
@@ -1482,8 +1497,8 @@ sub _getMixData {
                         tracks      => [@track_paths],
                         previous    => [@previous_paths],
                         shuffle     => int($shuffle),
-                        norepart    => int($prefs->get('no_repeat_artist')),
-                        norepalb    => int($prefs->get('no_repeat_album')),
+                        norepart    => int($noRepArtOverride // $prefs->get('no_repeat_artist')),
+                        norepalb    => int($noRepAlbOverride // $prefs->get('no_repeat_album')),
                         forest      => int($prefs->get('use_forest') || 0),
                         adaptiveweights => int($prefs->get('use_adaptive_weights') || 0),
                         learnedblend => int($prefs->get('learned_blend') // 50),
