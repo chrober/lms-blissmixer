@@ -1347,7 +1347,7 @@ sub _selectViaLastFm {
             foreach my $entry (@weighted) {
                 my $tier = $entry->{endorsed} ? 'artist-endorsed' : 'bliss-only';
                 $log->info("  [$tier] " . $entry->{track}->artistName . " - " . $entry->{track}->title
-                    . " (rank=" . $entry->{rank} . "/$poolSize)");
+                    . " (similarity-rank = " . $entry->{rank} . "/$poolSize)");
             }
         }
 
