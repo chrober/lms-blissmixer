@@ -1083,11 +1083,33 @@ sub _dstmMix {
                 }
             }
 
+            my $dstm_tracks = $prefs->get('dstm_tracks') || DEF_NUM_DSTM_TRACKS;
+            my $lastfmRerank = $useAdaptiveWeights && $prefs->get('use_lastfm_rerank')
+                && exists $INC{'Plugins/LastMix/LFM.pm'};
+            my $requestCount = $lastfmRerank ? $dstm_tracks * 10 : $dstm_tracks;
+            my $shuffle = $lastfmRerank ? 0 : 1;
+            # Inflate norepart/norepalb to cover the full pool so the sliding window
+            # in bliss-mixer never scrolls past a recently-played artist/album as the
+            # large output list is built up (formula: user_setting + requestCount - 1)
+            my ($noRepArtOverride, $noRepAlbOverride);
+            if ($lastfmRerank) {
+                my $noRepArt = int($prefs->get('no_repeat_artist') || 0);
+                my $noRepAlb = int($prefs->get('no_repeat_album') || 0);
+                $noRepArtOverride = $noRepArt > 0 ? $noRepArt + $requestCount - 1 : undef;
+                $noRepAlbOverride = $noRepAlb > 0 ? $noRepAlb + $requestCount - 1 : undef;
+            }
+
             my $maxNumPrevTracks = $prefs->get('no_repeat_track');
             if ($maxNumPrevTracks<0 || $maxNumPrevTracks>MAX_PREVIOUS_TRACKS) {
                 $maxNumPrevTracks = DEF_MAX_PREVIOUS_TRACKS;
             }
-            my $previousTracks = _getPreviousTracks($client, $maxNumPrevTracks);
+            # When Last.fm reranking inflates norepart, ensure we fetch enough previous
+            # tracks to populate that window — otherwise bliss-mixer receives an empty
+            # previous list and artist-repeat filtering has no context to work from.
+            my $prevFetchCount = $maxNumPrevTracks;
+            $prevFetchCount = $noRepArtOverride if defined $noRepArtOverride && $noRepArtOverride > $prevFetchCount;
+            $prevFetchCount = $noRepAlbOverride if defined $noRepAlbOverride && $noRepAlbOverride > $prevFetchCount;
+            my $previousTracks = _getPreviousTracks($client, $prevFetchCount);
             main::DEBUGLOG && $log->debug("Num tracks to previous: " . ($previousTracks ? scalar(@$previousTracks) : 0));
 
             # Collect comparison seeds for "what-if" logging (debug only, adaptive weights only)
@@ -1114,21 +1136,6 @@ sub _dstmMix {
                 }
             }
 
-            my $dstm_tracks = $prefs->get('dstm_tracks') || DEF_NUM_DSTM_TRACKS;
-            my $lastfmRerank = $useAdaptiveWeights && $prefs->get('use_lastfm_rerank')
-                && exists $INC{'Plugins/LastMix/LFM.pm'};
-            my $requestCount = $lastfmRerank ? $dstm_tracks * 10 : $dstm_tracks;
-            my $shuffle = $lastfmRerank ? 0 : 1;
-            # Inflate norepart/norepalb to cover the full pool so the sliding window
-            # in bliss-mixer never scrolls past a recently-played artist/album as the
-            # large output list is built up (formula: user_setting + requestCount - 1)
-            my ($noRepArtOverride, $noRepAlbOverride);
-            if ($lastfmRerank) {
-                my $noRepArt = int($prefs->get('no_repeat_artist') || 0);
-                my $noRepAlb = int($prefs->get('no_repeat_album') || 0);
-                $noRepArtOverride = $noRepArt > 0 ? $noRepArt + $requestCount - 1 : undef;
-                $noRepAlbOverride = $noRepAlb > 0 ? $noRepAlb + $requestCount - 1 : undef;
-            }
             my $jsonData = _getMixData(\@seedsToUse, $previousTracks ? \@$previousTracks : undef, $requestCount, $shuffle, $filterGenres, $noRepArtOverride, $noRepAlbOverride);
             my $port = $mixerPort || 12000;
             my $url = "http://localhost:$port/api/mix";
@@ -1340,14 +1347,14 @@ sub _selectViaLastFm {
         splice(@weighted, $finalCount) if $poolSize > $finalCount;
 
         main::INFOLOG && $log->info(sprintf(
-            "Last.fm selection: %d endorsed, %d non-endorsed in pool of %d (weight=%d) -> selected %d",
+            "Last.fm selection: %d last.fm-endorsed, %d bliss-only in pool of %d (weight=%d) -> selected %d",
             $endorsed_count, $rest_count, scalar @$trackObjs, $weight, scalar @weighted));
 
         if (main::INFOLOG) {
             foreach my $entry (@weighted) {
-                my $tier = $entry->{endorsed} ? 'artist-endorsed' : 'bliss-only';
-                $log->info("  [$tier] " . $entry->{track}->artistName . " - " . $entry->{track}->title
-                    . " (similarity-rank = " . $entry->{rank} . "/$poolSize)");
+                my $tier = $entry->{endorsed} ? 'last.fm-endorsed' : 'bliss-only';
+                $log->info("  [$tier, similarity-rank " . $entry->{rank} . "/$poolSize] "
+                    . $entry->{track}->artistName . " - " . $entry->{track}->title);
             }
         }
 
