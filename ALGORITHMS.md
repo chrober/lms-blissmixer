@@ -271,7 +271,10 @@ Automatically determines feature importance from seed similarity. Features
 where the seeds agree (low variance) are weighted heavily; features where
 they disagree (high variance) are weighted lightly. When a learned matrix
 (trained via the similarity survey) is available, it is blended in to
-incorporate personal preferences into the distance calculation.
+incorporate personal preferences into the distance calculation. Optionally,
+Last.fm artist-similarity data can be used to bias track selection towards
+artists that are musically related to the seed artists, helping to prevent
+genre drift in heterogeneous libraries.
 
 > **In plain English:** This algorithm listens to what your recent songs have
 > in common and automatically focuses on those shared qualities when searching
@@ -279,10 +282,14 @@ incorporate personal preferences into the distance calculation.
 > but very different harmonies, the algorithm concludes "rhythm matters here,
 > harmony doesn't" and finds songs that match the rhythm — without you having
 > to touch any sliders. If you've trained a personal similarity model via the
-> survey, it blends your preferences into the mix as well. It adapts to every
-> new set of seeds, so the mix naturally evolves as your listening session
-> progresses. Think of it as a DJ who pays attention to what ties your recent
-> songs together, factors in your personal taste, and picks the next track
+> survey, it blends your preferences into the mix as well. Optionally, it can
+> consult Last.fm to learn which artists are considered similar to your seed
+> artists, and give those artists a higher chance of being picked — so the mix
+> stays in a coherent musical neighbourhood even if your library spans many
+> genres. It adapts to every new set of seeds, so the mix naturally evolves as
+> your listening session progresses. Think of it as a DJ who pays attention to
+> what ties your recent songs together, factors in your personal taste and
+> what Last.fm knows about artist relationships, and picks the next track
 > accordingly.
 
 ```mermaid
