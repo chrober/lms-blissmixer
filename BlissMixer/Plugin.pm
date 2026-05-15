@@ -66,6 +66,7 @@ my $mixerBinary;
 my $lastMixerStart = 0;
 
 my $lastWeights = "";
+my $lastfmCooldownUntil = 0;
 
 sub shutdownPlugin {
     _stopMixer();
@@ -101,8 +102,9 @@ sub initPlugin {
         num_seed_tracks  => 3,
         seed_strict_order => 1,
         learned_blend    => 50,
-        use_lastfm_rerank => 0,
-        lastfm_rerank_weight => 10,
+        use_lastfm_weighting => 0,
+        lastfm_weighting_weight => 10,
+        lastfm_cooldown  => 300,
         run_analyser_after_scan => 0,
         analysis_read_tags => 0,
         analysis_write_tags => 0,
@@ -1064,7 +1066,7 @@ sub _dstmMix {
                     my $blend = int($prefs->get('learned_blend') // 50);
                     my $matrixFile = Plugins::BlissMixer::Survey::matrixPath();
                     my $hasMatrix = $matrixFile && -e $matrixFile;
-                    my $lfm = $prefs->get('use_lastfm_rerank') && exists $INC{'Plugins/LastMix/LFM.pm'};
+                    my $lfm = $prefs->get('use_lastfm_weighting') && exists $INC{'Plugins/LastMix/LFM.pm'};
                     my $blendDesc = !$hasMatrix || $blend == 0 ? 'pure variance-based'
                                   : $blend == 100              ? 'pure learned matrix'
                                   :                              "${blend}% learned matrix";
@@ -1084,15 +1086,15 @@ sub _dstmMix {
             }
 
             my $dstm_tracks = $prefs->get('dstm_tracks') || DEF_NUM_DSTM_TRACKS;
-            my $lastfmRerank = $useAdaptiveWeights && $prefs->get('use_lastfm_rerank')
+            my $lastfmWeighting = $useAdaptiveWeights && $prefs->get('use_lastfm_weighting')
                 && exists $INC{'Plugins/LastMix/LFM.pm'};
-            my $requestCount = $lastfmRerank ? $dstm_tracks * 10 : $dstm_tracks;
-            my $shuffle = $lastfmRerank ? 0 : 1;
+            my $requestCount = $lastfmWeighting ? $dstm_tracks * 10 : $dstm_tracks;
+            my $shuffle = $lastfmWeighting ? 0 : 1;
             # Inflate norepart/norepalb to cover the full pool so the sliding window
             # in bliss-mixer never scrolls past a recently-played artist/album as the
             # large output list is built up (formula: user_setting + requestCount - 1)
             my ($noRepArtOverride, $noRepAlbOverride);
-            if ($lastfmRerank) {
+            if ($lastfmWeighting) {
                 my $noRepArt = int($prefs->get('no_repeat_artist') || 0);
                 my $noRepAlb = int($prefs->get('no_repeat_album') || 0);
                 $noRepArtOverride = $noRepArt > 0 ? $noRepArt + $requestCount - 1 : undef;
@@ -1103,7 +1105,7 @@ sub _dstmMix {
             if ($maxNumPrevTracks<0 || $maxNumPrevTracks>MAX_PREVIOUS_TRACKS) {
                 $maxNumPrevTracks = DEF_MAX_PREVIOUS_TRACKS;
             }
-            # When Last.fm reranking inflates norepart, ensure we fetch enough previous
+            # When Last.fm weighting inflates norepart, ensure we fetch enough previous
             # tracks to populate that window — otherwise bliss-mixer receives an empty
             # previous list and artist-repeat filtering has no context to work from.
             my $prevFetchCount = $maxNumPrevTracks;
@@ -1238,13 +1240,16 @@ sub _dstmMix {
                     } else {
                         main::DEBUGLOG && $log->debug("Num tracks to use:" . scalar(@$tracks));
                         if (scalar @$tracks > 0) {
-                            if ($lastfmRerank) {
+                            if ($lastfmWeighting) {
                                 _selectViaLastFm(\@seedsToUse, \@trackObjs, $dstm_tracks, sub {
-                                    my $rerankedUrls = shift;
-                                    $cb->($client, $rerankedUrls);
+                                    my $weightedUrls = shift;
+                                    $cb->($client, $weightedUrls);
                                 });
                             } else {
-                                main::INFOLOG && $log->info("Selected tracks: " . join(", ", map { $_->artistName . " - " . $_->title } @trackObjs));
+                                if (main::INFOLOG) {
+                                    $log->info("Selected tracks (" . scalar(@trackObjs) . "):");
+                                    $log->info("  " . $_->artistName . " - " . $_->title) for @trackObjs;
+                                }
                                 $cb->($client, $tracks);
                             }
 
@@ -1300,10 +1305,18 @@ sub _dstmMix {
 sub _selectViaLastFm {
     my ($seeds, $trackObjs, $finalCount, $cb) = @_;
 
+    if ($lastfmCooldownUntil > time()) {
+        my $remaining = $lastfmCooldownUntil - time();
+        main::INFOLOG && $log->info("Last.fm rate-limit cooldown active (${remaining}s remaining) — falling back to pure bliss top-$finalCount tracks");
+        my $end = ($finalCount - 1 < $#{$trackObjs}) ? $finalCount - 1 : $#{$trackObjs};
+        $cb->([ map { $_->url } @{$trackObjs}[0..$end] ]);
+        return;
+    }
+
     my @seedInfo;
     my %lastfmArtists;
     my %seenArtists;
-    my $weight = $prefs->get('lastfm_rerank_weight') || 10;
+    my $weight = $prefs->get('lastfm_weighting_weight') || 10;
 
     $log->debug("Last.fm weighted selection: " . scalar(@$seeds) . " seeds, " . scalar(@$trackObjs) . " bliss candidates, weight=$weight, selecting $finalCount");
 
@@ -1397,8 +1410,18 @@ sub _fetchSimilarArtistsForSeeds {
     Plugins::LastMix::LFM->getSimilarArtists(sub {
         my $results = shift;
         if ($results && ref $results && $results->{error}) {
-            $log->warn("Last.fm error for \"" . ($seed->{artist} // '') . "\": "
-                . ($results->{message} // "code " . $results->{error}));
+            my $msg = $results->{message} // "code " . $results->{error};
+            if ($results->{error} == 29) {
+                my $cooldown = int($prefs->get('lastfm_cooldown') || 0);
+                if ($cooldown > 0) {
+                    $lastfmCooldownUntil = time() + $cooldown;
+                    $log->warn("Last.fm rate limit hit for \"" . ($seed->{artist} // '') . "\": $msg — suppressing Last.fm for ${cooldown}s");
+                } else {
+                    $log->warn("Last.fm rate limit hit for \"" . ($seed->{artist} // '') . "\": $msg");
+                }
+            } else {
+                $log->warn("Last.fm error for \"" . ($seed->{artist} // '') . "\": $msg");
+            }
             $cb->(1);
             return;
         } elsif ($results && ref $results && $results->{similarartists} && ref $results->{similarartists}) {
