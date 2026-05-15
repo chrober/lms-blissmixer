@@ -1360,10 +1360,21 @@ sub _selectViaLastFm {
             $endorsed_count, $rest_count, scalar @$trackObjs, $weight, scalar @weighted));
 
         if (main::INFOLOG) {
+            my $rankWidth = length("$poolSize");
+            my $maxTierLen = 0;
+            for my $entry (@weighted) {
+                my $len = $entry->{endorsed} ? length('last.fm-endorsed') : length('bliss-only');
+                $maxTierLen = $len if $len > $maxTierLen;
+            }
+            my $tierWidth = $maxTierLen + 2;  # +2 for one space padding each side
             foreach my $entry (@weighted) {
                 my $tier = $entry->{endorsed} ? 'last.fm-endorsed' : 'bliss-only';
-                $log->info("  [$tier, similarity-rank " . $entry->{rank} . "/$poolSize] "
-                    . $entry->{track}->artistName . " - " . $entry->{track}->title);
+                my $pad  = $tierWidth - length($tier);
+                my $lpad = ' ' x int($pad / 2);
+                my $rpad = ' ' x ($pad - int($pad / 2));
+                $log->info(sprintf("  [%s%s%s| similarity-rank %*d/%d ] %s - %s",
+                    $lpad, $tier, $rpad, $rankWidth, $entry->{rank}, $poolSize,
+                    $entry->{track}->artistName, $entry->{track}->title));
             }
         }
 
