@@ -163,10 +163,10 @@ BLISSMIXER_MIX_ALGORITHM
 	EN	Mixing strategy
 
 BLISSMIXER_MIX_ALGORITHM_DESC
-	EN	<b>Static:</b> Finds similar tracks based on the four metric weight sliders (Tempo, Timbre, Loudness, Chroma). Best when you know which audio characteristics matter most.<br/><br/><b>Extended isolation forest:</b> Trains a statistical model on the seed tracks and scores candidates by how well they fit the pattern. No manual tuning needed; requires at least 4 seeds.<br/><br/><b>Adaptive weightings:</b> Automatically discovers which characteristics the seed tracks have in common and emphasises those when searching. When a learned matrix from the similarity survey is available, it is blended in to incorporate your personal preferences.
+	EN	<b>Metric weightings:</b> Finds similar tracks based on the four metric weight sliders (Tempo, Timbre, Loudness, Chroma). Best when you know which audio characteristics matter most.<br/><br/><b>Extended isolation forest:</b> Trains a statistical model on the seed tracks and scores candidates by how well they fit the pattern. No manual tuning needed; requires at least 4 seeds.<br/><br/><b>Adaptive weightings:</b> Automatically discovers which characteristics the seed tracks have in common and emphasises those when searching. When a learned matrix from the similarity survey is available, it is blended in to incorporate your personal preferences.
 
 BLISSMIXER_ALG_STATIC
-	EN	Metric weightings (static)
+	EN	Metric weightings
 
 BLISSMIXER_ALG_FOREST
 	EN	Extended isolation forest
