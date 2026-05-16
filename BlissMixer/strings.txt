@@ -368,3 +368,33 @@ BLISSMIXER_LEARNING_STATUS
 
 BLISSMIXER_LEARNING_FAILED
 	EN	Learning failed unexpectedly. Check the Lyrion server log for details.
+
+BLISSMIXER_TRIPLETS_BACKUP_PATH
+	EN	Training data backup folder
+
+BLISSMIXER_TRIPLETS_BACKUP_PATH_DESC
+	EN	If set, backup zip files of the training triplets are stored in this folder. Backup filenames include a timestamp.
+
+BLISSMIXER_BACKUP_NOW_BUTTON
+	EN	Backup now
+
+BLISSMIXER_BACKUP_SUCCESS
+	EN	Backup created.
+
+BLISSMIXER_BACKUP_FAILED
+	EN	Backup failed.
+
+BLISSMIXER_TRIPLETS_RESTORE_PATH
+	EN	Restore from backup
+
+BLISSMIXER_TRIPLETS_RESTORE_PATH_DESC
+	EN	Choose a backup zip file to restore the training triplets.
+
+BLISSMIXER_RESTORE_SUCCESS
+	EN	Training data restored successfully.
+
+BLISSMIXER_RESTORE_FAILED
+	EN	Restore failed.
+
+BLISSMIXER_RESTORE_IN_PROGRESS
+	EN	Restoring backup...

@@ -14,6 +14,8 @@ use strict;
 use DBI;
 use File::Basename;
 use File::Slurp qw(read_file write_file);
+use File::Spec;
+use Archive::Zip qw(:ERROR_CODES);
 use HTTP::Status qw(RC_NOT_FOUND RC_OK RC_BAD_REQUEST RC_INTERNAL_SERVER_ERROR);
 use JSON::XS qw(encode_json decode_json);
 use Scalar::Util qw(blessed);
@@ -117,6 +119,27 @@ sub cliCommand {
     } elsif ($act eq 'clear-training-data') {
         _clearTrainingData();
         $request->addResult("msg", "cleared");
+        $request->setStatusDone();
+    } elsif ($act eq 'backup') {
+        my ($ok, $msg) = _backupTriplets();
+        if ($ok) {
+            $request->addResult("ok", 1);
+        } else {
+            $request->addResult("msg", $msg || "Backup failed - check server log");
+        }
+        $request->setStatusDone();
+    } elsif ($act eq 'restore-backup') {
+        my $zipPath = $request->getParam('path');
+        unless ($zipPath) {
+            $request->setStatusBadParams();
+            return;
+        }
+        my $err = _restoreBackup($zipPath);
+        if ($err) {
+            $request->addResult("msg", $err);
+        } else {
+            $request->addResult("ok", 1);
+        }
         $request->setStatusDone();
     } else {
         $request->setStatusBadParams();
@@ -379,6 +402,53 @@ sub _countTriplets {
     my $triplets = eval { _loadTriplets() };
     return 0 if $@;
     return scalar @$triplets;
+}
+
+sub _backupTriplets {
+    my $backupDir = $prefs->get('triplets_backup_path');
+    unless ($backupDir && length($backupDir) > 0) {
+        return (0, "Backup folder is not configured.");
+    }
+    unless (-d $backupDir) {
+        $log->warn("Survey: backup path does not exist: $backupDir");
+        return (0, "Backup folder does not exist: $backupDir");
+    }
+    my @t = localtime(time());
+    my $ts = sprintf("%04d%02d%02d-%02d%02d%02d", $t[5]+1900, $t[4]+1, $t[3], $t[2], $t[1], $t[0]);
+    my $zipFile = File::Spec->catfile($backupDir, "blissmixer-triplets-${ts}.zip");
+    my $zip = Archive::Zip->new();
+    $zip->addFile($tripletsPath, "training_triplets.json");
+    if ($zip->writeToFileNamed($zipFile) != AZ_OK) {
+        $log->warn("Survey: failed to write backup to $zipFile");
+        return (0, "Failed to write backup file in configured folder. Check folder permissions.");
+    }
+    main::INFOLOG && $log->info("Survey: backed up triplets to $zipFile");
+    return (1, undef);
+}
+
+sub _restoreBackup {
+    my $zipPath = shift;
+    unless (-f $zipPath) {
+        return "File not found: $zipPath";
+    }
+    my $zip = Archive::Zip->new();
+    unless ($zip->read($zipPath) == AZ_OK) {
+        return "Failed to read zip file";
+    }
+    my $member = $zip->memberNamed("training_triplets.json");
+    unless ($member) {
+        return "training_triplets.json not found in zip";
+    }
+    my ($content, $status) = $zip->contents($member);
+    unless ($status == AZ_OK) {
+        return "Failed to extract training data";
+    }
+    eval { write_file($tripletsPath, { binmode => ':utf8' }, $content); };
+    if ($@) {
+        return "Failed to write training data: $@";
+    }
+    main::INFOLOG && $log->info("Survey: restored triplets from $zipPath");
+    return undef;
 }
 
 sub _clearTrainingData {

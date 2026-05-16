@@ -108,7 +108,8 @@ sub initPlugin {
         analysis_write_tags => 0,
         analyser_max_files => 0,
         analyser_max_threads => 0,
-        match_all_genres => 0
+        match_all_genres => 0,
+        triplets_backup_path => ''
     });
 
     $prefs->setChange(\&Plugins::BlissMixer::Importer::toggleUseImporter, 'run_analyser_after_scan');
@@ -1060,10 +1061,14 @@ sub _dstmMix {
         if (scalar @seedsToUse > 0) {
             if (main::INFOLOG) {
                 my $strategy;
+                my $singleSeedLearnedOverride = 0;
+                my $configuredBlend;
                 if ($useAdaptiveWeights) {
                     my $blend = int($prefs->get('learned_blend') // 50);
+                    $configuredBlend = $blend;
                     my $matrixFile = Plugins::BlissMixer::Survey::matrixPath();
                     my $hasMatrix = $matrixFile && -e $matrixFile;
+                    $singleSeedLearnedOverride = $hasMatrix && scalar(@seedsToUse) == 1;
                     my $lfm = $prefs->get('use_lastfm_weighting') && exists $INC{'Plugins/LastMix/LFM.pm'};
                     my $blendDesc = !$hasMatrix || $blend == 0 ? 'pure variance-based'
                                   : $blend == 100              ? 'pure learned matrix'
@@ -1077,6 +1082,9 @@ sub _dstmMix {
                     $strategy = 'static weights';
                 }
                 $log->info("Mixing strategy: $strategy");
+                if ($singleSeedLearnedOverride && defined $configuredBlend && $configuredBlend < 100) {
+                    $log->info("Single-seed override: using pure learned matrix.");
+                }
                 # At debug level the upstream "Seed /path id:X" messages already list seeds
                 unless ($log->is_debug) {
                     $log->info("Seed: " . $_->artistName . " - " . $_->title) for @seedsToUse;
