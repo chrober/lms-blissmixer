@@ -38,7 +38,7 @@ sub prefs {
                     'weight_tempo', 'weight_timbre', 'weight_loudness', 'weight_chroma', 'max_bpm_diff',
                     'use_track_genre', 'run_analyser_after_scan', 'analysis_read_tags', 'analysis_write_tags',
                     'use_forest', 'use_adaptive_weights', 'num_seed_tracks', 'seed_strict_order', 'learned_blend', 'use_lastfm_weighting', 'lastfm_weighting_weight', 'analyser_ignore_dirs', 'analyser_max_files', 'analyser_max_threads',
-                    'analyser_ignore_txt', 'match_all_genres');
+                    'analyser_ignore_txt', 'match_all_genres', 'triplets_backup_path');
 }
 
 sub beforeRender {
@@ -76,6 +76,12 @@ sub beforeRender {
     my $learnerBinary = Slim::Utils::Misc::findbin('bliss-learner');
     $paramRef->{'no_learner_binary'} = !$learnerBinary;
     $paramRef->{'lastmix_available'} = Slim::Utils::PluginManager->isEnabled('Plugins::LastMix::Plugin') ? 1 : 0;
+    $paramRef->{'restore_in_progress_text'} = string('BLISSMIXER_RESTORE_IN_PROGRESS');
+    $paramRef->{'restore_success_text'} = string('BLISSMIXER_RESTORE_SUCCESS');
+    $paramRef->{'restore_failed_text'} = string('BLISSMIXER_RESTORE_FAILED');
+    $paramRef->{'backup_now_text'} = string('BLISSMIXER_BACKUP_NOW_BUTTON');
+    $paramRef->{'backup_success_text'} = string('BLISSMIXER_BACKUP_SUCCESS');
+    $paramRef->{'backup_failed_text'} = string('BLISSMIXER_BACKUP_FAILED');
 }
 
 sub handler {

@@ -1,3 +1,5 @@
+[% PROCESS settings/header.html %]
+
 <style>
     .hidden {
         display:none;
@@ -23,7 +25,6 @@
         resize:both!important;
     }
 </style>
-[% PROCESS settings/header.html %]
 
     [% WRAPPER settingSection %]
 
@@ -207,6 +208,17 @@
         <div id="learning-status" style="margin-top:8px"></div>
         [% END %]
         </div>
+
+        <br/><hr style="opacity:0.4" class="sub-sep"/><br/>
+        [% WRAPPER settingGroup title="BLISSMIXER_TRIPLETS_BACKUP_PATH" desc="BLISSMIXER_TRIPLETS_BACKUP_PATH_DESC" %]
+        <input type="text" class="stdedit selectFolder" name="pref_triplets_backup_path" id="triplets_backup_path" value="[% prefs.triplets_backup_path %]" size="40">
+        <button id="backup-now-btn" onclick="backupNow()" type="button" style="margin-left:8px" [% UNLESS prefs.triplets_backup_path %] disabled [% END %]>[% backup_now_text %]</button>
+        <span id="backup-now-status" style="margin-left:8px;opacity:0.8"></span>
+        [% END %]
+        [% WRAPPER settingGroup title="BLISSMIXER_TRIPLETS_RESTORE_PATH" desc="BLISSMIXER_TRIPLETS_RESTORE_PATH_DESC" %]
+        <input type="hidden" class="selectFile" id="restore_backup_path" value="">
+        <div id="restore-status" style="margin-top:4px;opacity:0.8"></div>
+        [% END %]
 
     [% END %]
 
@@ -403,6 +415,9 @@
     let surveyIntervalDuration = 5000;
     let surveyStatusMsgCount = 0;
     let learningErrorMsg = null;
+    let restoreWatchInterval = undefined;
+    let restoreLastSeenPath = '';
+    let restoreIsRunning = false;
 
     async function sendSurveyMsg(act) {
         const serverjsonurl = "[% jsonrpc_url %]";
@@ -520,12 +535,130 @@
         }
     }
 
+    function backupNow() {
+        let backupPathEl = document.getElementById('triplets_backup_path');
+        if (!backupPathEl || !(backupPathEl.value || '').trim()) {
+            updateBackupButtonState();
+            return;
+        }
+        sendSurveyMsg('backup').then((resp) => {
+            let statusEl = document.getElementById('backup-now-status');
+            if (undefined==statusEl) return;
+            let ok = undefined!=resp && undefined!=resp.result && undefined!=resp.result.ok;
+            statusEl.textContent = ok ? "[% backup_success_text %]" : (undefined!=resp && undefined!=resp.result && undefined!=resp.result.msg ? resp.result.msg : "[% backup_failed_text %]");
+            setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 4000);
+        });
+    }
+
+    function updateBackupButtonState() {
+        let backupPathEl = document.getElementById('triplets_backup_path');
+        let backupBtnEl = document.getElementById('backup-now-btn');
+        if (!backupPathEl || !backupBtnEl) {
+            return;
+        }
+        backupBtnEl.disabled = !(backupPathEl.value || '').trim();
+    }
+
+    function restoreBackup() {
+        if (restoreIsRunning) return;
+        let pathInput = document.getElementById('restore_backup_path');
+        let path = (pathInput ? pathInput.value : '').trim();
+        if (!path) return;
+        if (path.endsWith('/') || path.endsWith('\\')) return;
+        restoreIsRunning = true;
+        restoreLastSeenPath = path;
+        if (pathInput) pathInput.disabled = true;
+        let statusEl = document.getElementById('restore-status');
+        if (statusEl) statusEl.textContent = "[% restore_in_progress_text %]";
+        const serverjsonurl = "[% jsonrpc_url %]";
+        const msg = JSON.stringify({id: 1, method: 'slim.request', params: ['', ['blissmixer', 'survey', 'act:restore-backup', 'path:' + path]]});
+        fetch(serverjsonurl, {
+            method: "post",
+            headers: { "Content-Type": "application/json", "Origin": window.location.hostname },
+            body: msg
+        }).then(r => r.json()).then((resp) => {
+            let statusEl = document.getElementById('restore-status');
+            if (undefined==statusEl) return;
+            if (undefined!=resp && undefined!=resp.result && undefined!=resp.result.ok) {
+                statusEl.textContent = "[% restore_success_text %]";
+                getSurveyStatus();
+            } else {
+                let msg = (undefined!=resp && undefined!=resp.result && undefined!=resp.result.msg) ? resp.result.msg : "[% restore_failed_text %]";
+                statusEl.textContent = msg;
+            }
+        }).catch(() => {
+            let statusEl = document.getElementById('restore-status');
+            if (statusEl) statusEl.textContent = "[% restore_failed_text %]";
+        }).finally(() => {
+            restoreIsRunning = false;
+            setRestorePathFromBackupFolder();
+            let restoreInput = document.getElementById('restore_backup_path');
+            if (restoreInput) restoreInput.disabled = false;
+        });
+    }
+
+    function ensurePathEndsWithSeparator(path) {
+        if (!path || path.length < 1) {
+            return path;
+        }
+        if (path.endsWith('/') || path.endsWith('\\')) {
+            return path;
+        }
+        // Keep Windows-style separators when the path is Windows-like.
+        if (path.indexOf('\\') >= 0 && path.indexOf('/') < 0) {
+            return path + '\\';
+        }
+        return path + '/';
+    }
+
+    function watchRestorePathSelection() {
+        if (restoreIsRunning) {
+            return;
+        }
+        let pathInput = document.getElementById('restore_backup_path');
+        if (!pathInput) {
+            return;
+        }
+        let path = (pathInput.value || '').trim();
+        if (!path || path.endsWith('/') || path.endsWith('\\')) {
+            return;
+        }
+        if (path && path !== restoreLastSeenPath) {
+            restoreBackup();
+        }
+    }
+
+    function setRestorePathFromBackupFolder() {
+        let backupPathEl = document.getElementById('triplets_backup_path');
+        let restorePathEl = document.getElementById('restore_backup_path');
+        if (backupPathEl && restorePathEl && backupPathEl.value) {
+            // For Material's file picker: a trailing separator expands this folder and shows files.
+            restorePathEl.value = ensurePathEndsWithSeparator(backupPathEl.value);
+            restoreLastSeenPath = restorePathEl.value.trim();
+        }
+    }
+
     window.addEventListener("load",() => {
         statusInterval = setInterval(getAnalyserStatus, 1000);
         getAnalyserStatus();
         getSurveyStatus();
         surveyStatusInterval = setInterval(getSurveyStatus, surveyIntervalDuration);
         updateLastFmWeight();
+        updateBackupButtonState();
+        setRestorePathFromBackupFolder();
+        let backupPathEl = document.getElementById('triplets_backup_path');
+        if (backupPathEl) {
+            backupPathEl.addEventListener('change', updateBackupButtonState);
+            backupPathEl.addEventListener('input', updateBackupButtonState);
+        }
+        let restorePathEl = document.getElementById('restore_backup_path');
+        if (restorePathEl) {
+            restorePathEl.addEventListener('change', restoreBackup);
+            restorePathEl.addEventListener('input', restoreBackup);
+        }
+        // Material sets input.value programmatically when "Use Selected" is clicked.
+        // Poll briefly for value changes because that path assignment may not emit DOM events.
+        restoreWatchInterval = setInterval(watchRestorePathSelection, 250);
         try {
             if (undefined!=window.localStorage) {
                 ["mixer-section", "analyser-section", "learning-section"].forEach(sect => {
@@ -534,6 +667,13 @@
                 });
             }
         } catch (e) {
+        }
+    });
+
+    window.addEventListener("beforeunload",() => {
+        if (restoreWatchInterval) {
+            clearInterval(restoreWatchInterval);
+            restoreWatchInterval = undefined;
         }
     });
 </script>
