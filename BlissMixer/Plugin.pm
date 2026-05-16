@@ -66,7 +66,6 @@ my $mixerBinary;
 my $lastMixerStart = 0;
 
 my $lastWeights = "";
-my $lastfmCooldownUntil = 0;
 
 sub shutdownPlugin {
     _stopMixer();
@@ -104,7 +103,6 @@ sub initPlugin {
         learned_blend    => 50,
         use_lastfm_weighting => 0,
         lastfm_weighting_weight => 10,
-        lastfm_cooldown  => 300,
         run_analyser_after_scan => 0,
         analysis_read_tags => 0,
         analysis_write_tags => 0,
@@ -1305,14 +1303,6 @@ sub _dstmMix {
 sub _selectViaLastFm {
     my ($seeds, $trackObjs, $finalCount, $cb) = @_;
 
-    if ($lastfmCooldownUntil > time()) {
-        my $remaining = $lastfmCooldownUntil - time();
-        main::INFOLOG && $log->info("Last.fm rate-limit cooldown active (${remaining}s remaining) — falling back to pure bliss top-$finalCount tracks");
-        my $end = ($finalCount - 1 < $#{$trackObjs}) ? $finalCount - 1 : $#{$trackObjs};
-        $cb->([ map { $_->url } @{$trackObjs}[0..$end] ]);
-        return;
-    }
-
     my @seedInfo;
     my %lastfmArtists;
     my %seenArtists;
@@ -1411,17 +1401,7 @@ sub _fetchSimilarArtistsForSeeds {
         my $results = shift;
         if ($results && ref $results && $results->{error}) {
             my $msg = $results->{message} // "code " . $results->{error};
-            if ($results->{error} == 29) {
-                my $cooldown = int($prefs->get('lastfm_cooldown') || 0);
-                if ($cooldown > 0) {
-                    $lastfmCooldownUntil = time() + $cooldown;
-                    $log->warn("Last.fm rate limit hit for \"" . ($seed->{artist} // '') . "\": $msg — suppressing Last.fm for ${cooldown}s");
-                } else {
-                    $log->warn("Last.fm rate limit hit for \"" . ($seed->{artist} // '') . "\": $msg");
-                }
-            } else {
-                $log->warn("Last.fm error for \"" . ($seed->{artist} // '') . "\": $msg");
-            }
+            $log->warn("Last.fm error for \"" . ($seed->{artist} // '') . "\": $msg");
             $cb->(1);
             return;
         } elsif ($results && ref $results && $results->{similarartists} && ref $results->{similarartists}) {
