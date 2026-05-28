@@ -1330,14 +1330,15 @@ sub _selectViaLastFm {
     }
 
     _fetchSimilarArtistsForSeeds([@seedInfo], \%lastfmArtists, sub {
-        my $hadError = shift;
+        my ($hadError, $stats) = @_;
+        $stats ||= {};
 
         if ($hadError) {
             my $poolSize = scalar @$trackObjs;
             my $end = ($finalCount - 1 < $#{$trackObjs}) ? $finalCount - 1 : $#{$trackObjs};
             if (main::INFOLOG) {
                 $log->info("Last.fm API error: falling back to pure bliss top-$finalCount tracks");
-                $log->info(sprintf("Last.fm selection: 0 last.fm-endorsed, %d bliss-only in pool of %d (weight=%d) -> selected %d",
+                $log->info(sprintf("Last.fm artist selection: 0 last.fm-endorsed, %d bliss-only in pool of %d (weight=%d) -> selected %d",
                     $poolSize, $poolSize, $weight, $end + 1));
                 for my $i (0 .. $end) {
                     $log->info("  [bliss-only, similarity-rank " . ($i + 1) . "/$poolSize] "
@@ -1347,6 +1348,12 @@ sub _selectViaLastFm {
             my $urls = [ map { $_->url } @{$trackObjs}[0..$end] ];
             $cb->($urls);
             return;
+        }
+
+        if (main::INFOLOG && ($stats->{failed} || 0) > 0) {
+            my $ok = $stats->{succeeded} || 0;
+            my $failed = $stats->{failed} || 0;
+            $log->info("Last.fm partial result: $ok seed lookups succeeded, $failed failed; using collected endorsements");
         }
 
         main::INFOLOG && $log->info("Last.fm: " . scalar(keys %lastfmArtists) . " endorsed artists (incl. seed artists)");
@@ -1367,7 +1374,7 @@ sub _selectViaLastFm {
         splice(@weighted, $finalCount) if $poolSize > $finalCount;
 
         main::INFOLOG && $log->info(sprintf(
-            "Last.fm selection: %d last.fm-endorsed, %d bliss-only in pool of %d (weight=%d) -> selected %d",
+            "Last.fm artist selection: %d last.fm-endorsed, %d bliss-only in pool of %d (weight=%d) -> selected %d",
             $endorsed_count, $rest_count, scalar @$trackObjs, $weight, scalar @weighted));
 
         if (main::INFOLOG) {
@@ -1395,10 +1402,12 @@ sub _selectViaLastFm {
 }
 
 sub _fetchSimilarArtistsForSeeds {
-    my ($seedInfo, $resultHash, $cb) = @_;
+    my ($seedInfo, $resultHash, $cb, $stats) = @_;
+    $stats ||= { succeeded => 0, failed => 0 };
 
     if (!@$seedInfo) {
-        $cb->(0);
+        my $allFailed = $stats->{failed} > 0 && $stats->{succeeded} == 0;
+        $cb->($allFailed ? 1 : 0, $stats);
         return;
     }
 
@@ -1410,9 +1419,11 @@ sub _fetchSimilarArtistsForSeeds {
         if ($results && ref $results && $results->{error}) {
             my $msg = $results->{message} // "code " . $results->{error};
             $log->warn("Last.fm error for \"" . ($seed->{artist} // '') . "\": $msg");
-            $cb->(1);
+            $stats->{failed}++;
+            _fetchSimilarArtistsForSeeds($seedInfo, $resultHash, $cb, $stats);
             return;
         } elsif ($results && ref $results && $results->{similarartists} && ref $results->{similarartists}) {
+            $stats->{succeeded}++;
             my $artists = $results->{similarartists}->{artist};
             if ($artists && ref $artists eq 'ARRAY') {
                 my $count = 0;
@@ -1428,9 +1439,10 @@ sub _fetchSimilarArtistsForSeeds {
                 }
             }
         } else {
+            $stats->{succeeded}++;
             main::INFOLOG && $log->info("Last.fm: no similar artists returned for \"" . ($seed->{artist} // '') . "\"");
         }
-        _fetchSimilarArtistsForSeeds($seedInfo, $resultHash, $cb);
+        _fetchSimilarArtistsForSeeds($seedInfo, $resultHash, $cb, $stats);
     }, {
         artist => $seed->{artist},
         mbid   => $seed->{artist_mbid},
