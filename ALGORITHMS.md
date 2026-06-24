@@ -319,7 +319,7 @@ flowchart TD
     R --> LFM{Last.fm weighted<br/>selection enabled?}
     LFM -- No --> T[Final track list]
     LFM -- Yes --> LFM1["Query Last.fm:<br/>getSimilarArtists for each seed<br/>(seed artists pre-endorsed)"]
-    LFM1 --> LFM2["Assign weights per candidate:<br/>endorsed artist → W (configurable)<br/>other artist → 1"]
+    LFM1 --> LFM2["Convert target percentage<br/>to pool-adjusted weights"]
     LFM2 --> LFM3["Weighted random sample<br/>(Efraimidis–Spirakis)<br/>draw dstm_tracks from pool"]
     LFM3 --> T[Final track list]
 
@@ -423,14 +423,15 @@ after bliss-mixer returns its acoustically-scored candidates:
 2. Last.fm is queried for similar artists (`artist.getSimilar`) based on each
    seed track's artist. The seed artists themselves are also included in the
    endorsed set.
-3. Each candidate is assigned a selection weight:
-   - **Artist-endorsed** (artist in Last.fm similar-artists set): weight = W
-     (configurable, default 10)
-   - **Non-endorsed** (artist not in set): weight = 1
+3. The configured Last.fm artist probability (1-100%, default 25%) is converted
+   into a pool-adjusted endorsed-artist weight. For example, 25 targets roughly
+   one endorsed-artist track in every four selected tracks, when enough endorsed
+   and non-endorsed candidates are available.
 4. Final tracks are drawn via weighted random sampling without replacement
    (Efraimidis–Spirakis algorithm: `key = rand() ** (1/weight)`, sort
-   descending, take top N). Endorsed-artist tracks are W× more likely to be
-   selected, but non-endorsed tracks can still be chosen.
+   descending, take top N). Endorsed-artist tracks are biased toward the target
+   probability, but non-endorsed tracks can still be chosen unless the target is
+   100% and enough endorsed tracks are available.
 
 The larger pool (e.g. 50 tracks for dstm=5) ensures sufficient artist diversity
 for meaningful matches. Every returned track has passed bliss's acoustic quality
@@ -448,8 +449,8 @@ If Last.fm returns an API error (e.g. rate limit), the plugin short-circuits the
 weighted sampling and returns the top-N candidates directly by Mahalanobis
 distance — no randomisation, no endorsement weighting. If Last.fm returns no
 similar artists for a seed (rather than an error), processing continues with
-weight=1 for all candidates from that seed's artist, and the weighted sampling
-runs normally over the full pool.
+the endorsements collected from the other seeds, and the weighted sampling runs
+normally over the full pool.
 
 > **In plain English:** After bliss finds the 50 most similar-sounding tracks in
 > your library, it asks Last.fm "which of these artists are related to what's

@@ -102,7 +102,7 @@ sub initPlugin {
         seed_strict_order => 1,
         learned_blend    => 50,
         use_lastfm_weighting => 0,
-        lastfm_weighting_weight => 10,
+        lastfm_weighting_weight => 25,
         run_analyser_after_scan => 0,
         analysis_read_tags => 0,
         analysis_write_tags => 0,
@@ -1314,9 +1314,11 @@ sub _selectViaLastFm {
     my @seedInfo;
     my %lastfmArtists;
     my %seenArtists;
-    my $weight = $prefs->get('lastfm_weighting_weight') || 10;
+    my $targetPercent = int($prefs->get('lastfm_weighting_weight') || 25);
+    $targetPercent = 1 if $targetPercent < 1;
+    $targetPercent = 100 if $targetPercent > 100;
 
-    $log->debug("Last.fm weighted selection: " . scalar(@$seeds) . " seeds, " . scalar(@$trackObjs) . " bliss candidates, weight=$weight, selecting $finalCount");
+    $log->debug("Last.fm weighted selection: " . scalar(@$seeds) . " seeds, " . scalar(@$trackObjs) . " bliss candidates, target=$targetPercent%, selecting $finalCount");
 
     foreach my $seed (@$seeds) {
         my $key = _lastfmNormalizeArtist($seed->artistName);
@@ -1338,8 +1340,8 @@ sub _selectViaLastFm {
             my $end = ($finalCount - 1 < $#{$trackObjs}) ? $finalCount - 1 : $#{$trackObjs};
             if (main::INFOLOG) {
                 $log->info("Last.fm API error: falling back to pure bliss top-$finalCount tracks");
-                $log->info(sprintf("Last.fm artist selection: 0 last.fm-endorsed, %d bliss-only in pool of %d (weight=%d) -> selected %d",
-                    $poolSize, $poolSize, $weight, $end + 1));
+                $log->info(sprintf("Last.fm artist selection: 0 last.fm-endorsed, %d bliss-only in pool of %d (target=%d%%) -> selected %d",
+                    $poolSize, $poolSize, $targetPercent, $end + 1));
                 for my $i (0 .. $end) {
                     $log->info("  [bliss-only, similarity-rank " . ($i + 1) . "/$poolSize] "
                         . $trackObjs->[$i]->artistName . " - " . $trackObjs->[$i]->title);
@@ -1364,18 +1366,24 @@ sub _selectViaLastFm {
         for my $i (0 .. $#$trackObjs) {
             my $trackObj = $trackObjs->[$i];
             my $artistKey = _lastfmNormalizeArtist($trackObj->artistName);
-            my $w = exists $lastfmArtists{$artistKey} ? $weight : 1;
+            my $endorsed = exists $lastfmArtists{$artistKey};
+            if ($endorsed) { $endorsed_count++ } else { $rest_count++ }
+            push @weighted, { track => $trackObj, endorsed => $endorsed, rank => $i + 1 };
+        }
+
+        my $endorsedWeight = _lastfmEndorsedWeightForPercent($targetPercent, $endorsed_count, $rest_count);
+        for my $entry (@weighted) {
+            my $w = $entry->{endorsed} ? $endorsedWeight : 1;
             my $key = rand() ** (1.0 / $w);
-            push @weighted, { track => $trackObj, key => $key, endorsed => ($w > 1), rank => $i + 1 };
-            if ($w > 1) { $endorsed_count++ } else { $rest_count++ }
+            $entry->{key} = $key;
         }
 
         @weighted = sort { $b->{key} <=> $a->{key} } @weighted;
         splice(@weighted, $finalCount) if $poolSize > $finalCount;
 
         main::INFOLOG && $log->info(sprintf(
-            "Last.fm artist selection: %d last.fm-endorsed, %d bliss-only in pool of %d (weight=%d) -> selected %d",
-            $endorsed_count, $rest_count, scalar @$trackObjs, $weight, scalar @weighted));
+            "Last.fm artist selection: %d last.fm-endorsed, %d bliss-only in pool of %d (target=%d%%, computed weight=%.3f) -> selected %d",
+            $endorsed_count, $rest_count, scalar @$trackObjs, $targetPercent, $endorsedWeight, scalar @weighted));
 
         if (main::INFOLOG) {
             my $rankWidth = length("$poolSize");
@@ -1399,6 +1407,17 @@ sub _selectViaLastFm {
         my $urls = [ map { $_->{track}->url } @weighted ];
         $cb->($urls);
     });
+}
+
+sub _lastfmEndorsedWeightForPercent {
+    my ($targetPercent, $endorsedCount, $restCount) = @_;
+
+    return 1 if $endorsedCount <= 0 || $restCount <= 0;
+    return 1000000 if $targetPercent >= 100;
+
+    my $target = $targetPercent / 100.0;
+    my $weight = ($target * $restCount) / ((1.0 - $target) * $endorsedCount);
+    return $weight > 0 ? $weight : 0.000001;
 }
 
 sub _fetchSimilarArtistsForSeeds {
