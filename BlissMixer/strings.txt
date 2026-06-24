@@ -208,10 +208,10 @@ BLISSMIXER_LASTFM_WEIGHTING_UNAVAILABLE
 	EN	Requires the LastMix plugin to be installed and enabled.
 
 BLISSMIXER_LASTFM_WEIGHTING_WEIGHT
-	EN	Last.fm artist weight
+	EN	Last.fm artist probability
 
 BLISSMIXER_LASTFM_WEIGHTING_WEIGHT_DESC
-	EN	Controls how strongly Last.fm artist similarity influences track selection. Higher values make tracks from endorsed artists more likely to be chosen. At the minimum (2) the bias is mild; at maximum (20) endorsed artists dominate the selection. Default: 10.
+	EN	Target percentage of chosen tracks that should come from Last.fm-endorsed artists. For example, 25 means roughly one endorsed artist in every four selected tracks, when enough endorsed and non-endorsed candidates are available. Default: 25.
 
 BLISSMIXER_USE_TRACK_GENRE
 	EN	Use track genre
