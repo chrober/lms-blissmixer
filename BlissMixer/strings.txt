@@ -137,183 +137,244 @@ BLISSMIXER_PORT_NOTE
 
 BLISSMIXER_METRICS
 	EN	Metric weightings
+	DE	Gewichtung der Metriken
 
 BLISSMIXER_METRICS_NOTE
 	EN	Tracks are located based upon how close their metrics are to seed tracks. Bliss creates 23 such metrics per track; 'Tempo' has a single metric, 'Timbre' has 7 metrics, 'Loudness' has 2 metrics, and 'Chroma' has 13. By default each individual metric has the same 'weight', therefore 'Tempo' makes up 4% of a similarity score, 'Timbre' 30%, 'Loudness' 9%, and 'Chroma' 57%. You may use the settings below to alter this weighting per metric type. For more information, please refer to <a href="https://lelele.io/bliss.html">https://lelele.io/bliss.html</a>
+	DE	Tracks werden danach ausgewählt, wie nah ihre Metriken an denen der Seed-Tracks liegen. Bliss erstellt 23 solcher Metriken pro Track: 'Tempo' hat eine einzelne Metrik, 'Timbre' hat 7 Metriken, 'Loudness' hat 2 Metriken und 'Chroma' hat 13. Standardmäßig hat jede einzelne Metrik dasselbe 'Gewicht'; dadurch macht 'Tempo' 4% eines Ähnlichkeitswerts aus, 'Timbre' 30%, 'Loudness' 9% und 'Chroma' 57%. Mit den folgenden Einstellungen kann diese Gewichtung pro Metriktyp geändert werden. Weitere Informationen finden Sie unter <a href="https://lelele.io/bliss.html">https://lelele.io/bliss.html</a>
 
 BLISSMIXER_METRIC_TEMPO
 	EN	Tempo
+	DE	Tempo
 
 BLISSMIXER_METRIC_TIMBRE
 	EN	Timbre
+	DE	Timbre
 
 BLISSMIXER_METRIC_LOUDNESS
 	EN	Loudness
+	DE	Loudness
 
 BLISSMIXER_METRIC_CHROMA
 	EN	Chroma
+	DE	Chroma
 
 BLISSMIXER_MAX_BPM_DIFF
 	EN	Maximum BPM difference
+	DE	Maximale BPM-Differenz
 
 BLISSMIXER_MAX_BPM_DIFF_DESC
 	EN	Maximum difference between BPM of seed track and candidate tracks. Set to 0 for no maximum.
+	DE	Maximale Differenz zwischen den BPM des Seed-Tracks und der Kandidaten-Tracks. Auf 0 setzen, um kein Maximum zu verwenden.
 
 BLISSMIXER_MIX_ALGORITHM
 	EN	Mixing strategy
+	DE	Mix-Strategie
 
 BLISSMIXER_MIX_ALGORITHM_DESC
 	EN	<b>Metric weightings:</b> Finds similar tracks based on the four metric weight sliders (Tempo, Timbre, Loudness, Chroma). Best when you know which audio characteristics matter most.<br/><br/><b>Extended isolation forest:</b> Trains a statistical model on the seed tracks and scores candidates by how well they fit the pattern. No manual tuning needed; requires at least 4 seeds.<br/><br/><b>Adaptive weightings:</b> Automatically discovers which characteristics the seed tracks have in common and emphasises those when searching.
+	DE	<b>Gewichtung der Metriken:</b> Findet ähnliche Tracks anhand der vier Regler für die Metrikgewichtung (Tempo, Timbre, Loudness, Chroma). Am besten geeignet, wenn Sie wissen, welche Audio-Eigenschaften am wichtigsten sind.<br/><br/><b>Extended Isolation Forest:</b> Trainiert ein statistisches Modell mit den Seed-Tracks und bewertet Kandidaten danach, wie gut sie in dieses Muster passen. Keine manuelle Abstimmung nötig; benötigt mindestens 4 Seeds.<br/><br/><b>Adaptive Gewichtungen:</b> Erkennt automatisch, welche Eigenschaften die Seed-Tracks gemeinsam haben, und gewichtet diese bei der Suche stärker.
 
 BLISSMIXER_ALG_STATIC
 	EN	Metric weightings
+	DE	Gewichtung der Metriken
 
 BLISSMIXER_ALG_FOREST
 	EN	Extended isolation forest
+	DE	Extended Isolation Forest
 
 BLISSMIXER_ALG_DYNAMIC
 	EN	Adaptive weightings
+	DE	Adaptive Gewichtungen
 
 BLISSMIXER_DYNAMIC_SECTION
 	EN	Adaptive weightings
+	DE	Adaptive Gewichtungen
 
 BLISSMIXER_DYNAMIC_SECTION_NOTE
 	EN	Discovers which audio characteristics the seed tracks have in common and automatically emphasises those when searching. Feature weights are derived from the variance across seed tracks — characteristics that are consistent across all seeds receive a higher weight.
+	DE	Erkennt, welche Audio-Eigenschaften die Seed-Tracks gemeinsam haben, und gewichtet diese bei der Suche automatisch stärker. Feature-Gewichte werden aus der Varianz über die Seed-Tracks abgeleitet — Eigenschaften, die über alle Seeds hinweg konsistent sind, erhalten ein höheres Gewicht.
 
 BLISSMIXER_NUM_SEED_TRACKS
 	EN	Number of seed tracks
+	DE	Anzahl der Seed-Tracks
 
 BLISSMIXER_NUM_SEED_TRACKS_DESC
 	EN	How many recent tracks to use as seeds for the adaptive weighting strategy. Fewer seeds give sharper, more focused weights. More seeds capture broader context but produce blurrier weights. Default: 3.
+	DE	Wie viele kürzlich gespielte Tracks als Seeds für die adaptive Gewichtungsstrategie verwendet werden. Weniger Seeds ergeben schärfere, stärker fokussierte Gewichte. Mehr Seeds erfassen einen breiteren Kontext, erzeugen aber unschärfere Gewichte. Default: 3.
 
 BLISSMIXER_SEED_STRICT_ORDER
 	EN	Use most recent tracks as seeds
+	DE	Zuletzt gespielte Tracks als Seeds verwenden
 
 BLISSMIXER_SEED_STRICT_ORDER_DESC
 	EN	When enabled, always use the last N tracks from the play queue as seeds, preserving their order. When disabled, seeds are randomly sampled from a larger pool of recent tracks.
+	DE	Wenn aktiviert, werden immer die letzten N Tracks aus der Play Queue als Seeds verwendet und ihre Reihenfolge beibehalten. Wenn deaktiviert, werden die Seeds zufällig aus einem größeren Pool kürzlich gespielter Tracks ausgewählt.
 
 BLISSMIXER_LASTFM_WEIGHTING
 	EN	Last.fm artist weighting
+	DE	Last.fm-Interpretengewichtung
 
 BLISSMIXER_LASTFM_WEIGHTING_DESC
 	EN	Helps reduce genre drift in heterogeneous libraries while still allowing acoustically similar tracks from unknown artists to be selected. When enabled, a larger pool of bliss candidates is fetched and tracks from Last.fm-endorsed artists are given a higher selection probability (weighted random sampling). Requires the LastMix plugin to be installed and enabled.
+	DE	Hilft, ein Abdriften der Stilrichtung in heterogenen Musiksammlungen zu reduzieren, während akustisch ähnliche Tracks von unbekannten Interpreten weiterhin ausgewählt werden können. Wenn aktiviert, wird ein größerer Pool von bliss-Kandidaten geladen und Tracks von durch Last.fm empfohlenen Interpreten erhalten eine höhere Auswahlwahrscheinlichkeit (gewichtete Zufallsauswahl). Benötigt ein installiertes und aktiviertes LastMix-Plugin.
 
 BLISSMIXER_LASTFM_WEIGHTING_UNAVAILABLE
 	EN	Requires the LastMix plugin to be installed and enabled.
+	DE	Benötigt ein installiertes und aktiviertes LastMix-Plugin.
 
 BLISSMIXER_LASTFM_WEIGHTING_WEIGHT
 	EN	Last.fm artist probability
+	DE	Last.fm-Interpretenwahrscheinlichkeit
 
 BLISSMIXER_LASTFM_WEIGHTING_WEIGHT_DESC
 	EN	Target percentage of chosen tracks that should come from Last.fm-endorsed artists. For example, 25 means roughly one endorsed artist in every four selected tracks, when enough endorsed and non-endorsed candidates are available. Default: 25.
+	DE	Gewünschter Anteil der ausgewählten Tracks, die von durch Last.fm empfohlenen Interpreten stammen sollen. 25 bedeutet zum Beispiel ungefähr einen empfohlenen Interpreten unter jeweils vier ausgewählten Tracks, sofern genügend empfohlene und nicht empfohlene Kandidaten verfügbar sind. Default: 25.
 
 BLISSMIXER_USE_TRACK_GENRE
 	EN	Use track genre
+	DE	Track-Stilrichtung verwenden
 
 BLISSMIXER_USE_TRACK_GENRE_DESC
 	EN	If a track is not in a genre group then restrict candidate tracks to seed track's genre.
+	DE	Wenn ein Track keiner Stilrichtungs-Gruppe angehört, Kandidaten-Tracks auf die Stilrichtung des Seed-Tracks beschränken.
 
 BLISSMIXER_ANALYSER
 	EN	Analyser
+	DE	Analyser
 
 BLISSMIXER_ANALYSER_NOTE
 	EN	Before you can use this mixer your music files need to be analysed. This can be performed automatically after each LMS scan, or you can manually initiate this using the 'Start Analysis' button below. Please note, however, that this can take a long time to complete. If you are running on a low-power machine you can download the analyser separately and run on a more powerful machine (<a href="https://github.com/CDrummond/bliss-analyser/releases" target="_blank">releases</a>, <a href="https://raw.githubusercontent.com/CDrummond/bliss-analyser/refs/heads/master/UserGuide.md" target="_blank">user guide</a>).
+	DE	Bevor Sie diesen Mixer verwenden können, müssen Ihre Musikdateien analysiert werden. Dies kann automatisch nach jedem LMS-Scan erfolgen oder manuell über die Schaltfläche 'Analyse starten' unten gestartet werden. Beachten Sie jedoch, dass dies sehr lange dauern kann. Wenn Sie ein leistungsschwaches System verwenden, können Sie den Analyser separat herunterladen und auf einem leistungsfähigeren System ausführen (<a href="https://github.com/CDrummond/bliss-analyser/releases" target="_blank">Releases</a>, <a href="https://raw.githubusercontent.com/CDrummond/bliss-analyser/refs/heads/master/UserGuide.md" target="_blank">Benutzerhandbuch</a>).
 
 BLISSMIXER_RUN_AFTER_SCAN
 	EN	Automatic analysis
+	DE	Automatische Analyse
 
 BLISSMIXER_RUN_AFTER_SCAN_DESC
 	EN	Automatically run the anlyser after LMS scans your music collection.
+	DE	Den Analyser automatisch ausführen, nachdem LMS Ihre Musiksammlung durchsucht hat.
 
 BLISSMIXER_ANALYSE_START_BUTTON
 	EN	Start Analysis
+	DE	Analyse starten
 
 BLISSMIXER_ANALYSE_ABORT_BUTTON
 	EN	Stop Analyser
+	DE	Analyser stoppen
 
 BLISSMIXER_ANALYSE_IGNORE_BUTTON
 	EN	Update 'ignore' now
+	DE	Ignore-Markierung aktualisieren
 
 BLISSMIXER_ANALYSE_CLEAR_FAILURES_BUTTON
 	EN	Clear Failures
+	DE	Fehler löschen
 
 BLISSMIXER_ANALYSE_READ_TAGS
 	EN	Read results from files
+	DE	Ergebnisse aus Dateien lesen
 
 BLISSMIXER_ANALYSE_READ_TAGS_DESC
 	EN	When analysing tracks first check to see if analysis results have been stored within the files themselves.
+	DE	Beim Analysieren von Tracks zuerst prüfen, ob Analyseergebnisse bereits in den Dateien selbst gespeichert wurden.
 
 BLISSMIXER_ANALYSE_WRITE_TAGS
 	EN	Store results in files
+	DE	Ergebnisse in Dateien speichern
 
 BLISSMIXER_ANALYSE_WRITE_TAGS_DESC
 	EN	Store the analysis results as a custom tag within the files themselves.
+	DE	Die Analyseergebnisse als benutzerdefiniertes Tag in den Dateien selbst speichern.
 
 BLISSMIXER_ANALYSER_NOT_FOUND
 	EN	Before you can use this mixer your music files need to be analysed. However, no analyser executable has been found on your system. You will need to download the analyser separately and run manually. Analyser executables can be found <a href="https://github.com/CDrummond/bliss-analyser/releases" target="_blank">here</a> and the <a href="https://raw.githubusercontent.com/CDrummond/bliss-analyser/refs/heads/master/UserGuide.md" target="_blank">user guide</a> will provide instructions on its use.
+	DE	Bevor Sie diesen Mixer verwenden können, müssen Ihre Musikdateien analysiert werden. Auf Ihrem System wurde jedoch keine ausführbare Analyser-Datei gefunden. Sie müssen den Analyser separat herunterladen und manuell ausführen. Ausführbare Analyser-Dateien finden Sie <a href="https://github.com/CDrummond/bliss-analyser/releases" target="_blank">hier</a>; das <a href="https://raw.githubusercontent.com/CDrummond/bliss-analyser/refs/heads/master/UserGuide.md" target="_blank">Benutzerhandbuch</a> enthält Hinweise zur Verwendung.
 
 BLISSMIXER_ANALYSER_AUTH_NOT_SUPPORTED
 	EN	Before you can use this mixer your music files need to be analysed. However, your LMS server is password protected and analysis via LMS is not currently supported with this configuration. You will need to download the analyser separately and run manually. Analyser executables can be found <a href="https://github.com/CDrummond/bliss-analyser/releases" target="_blank">here</a> and the <a href="https://raw.githubusercontent.com/CDrummond/bliss-analyser/refs/heads/master/UserGuide.md" target="_blank">user guide</a> will provide instructions on its use.
+	DE	Bevor Sie diesen Mixer verwenden können, müssen Ihre Musikdateien analysiert werden. Ihr LMS-Server ist jedoch passwortgeschützt und die Analyse über LMS wird mit dieser Konfiguration derzeit nicht unterstützt. Sie müssen den Analyser separat herunterladen und manuell ausführen. Ausführbare Analyser-Dateien finden Sie <a href="https://github.com/CDrummond/bliss-analyser/releases" target="_blank">hier</a>; das <a href="https://raw.githubusercontent.com/CDrummond/bliss-analyser/refs/heads/master/UserGuide.md" target="_blank">Benutzerhandbuch</a> enthält Hinweise zur Verwendung.
 
 BLISSMIXER_ANALYSED_TRACKS
 	EN	Analysed:
+	DE	Analysiert:
 
 BLISSMIXER_FAILED_TRACKS
 	EN	Failed:
+	DE	Fehlgeschlagen:
 
 BLISSMIXER_IGNORED_TRACKS
 	EN	'Ignored':
+	DE	'Ignoriert':
 
 BLISSMIXER_DOWNLOAD_CSV
 	EN	Download CSV
+	DE	CSV herunterladen
 
 BLISSMIXER_ANALYSER_EXCLUDE_MEDIA_FOLDERS
 	EN	Exclude media folders
+	DE	Auszuschließende Medienordner
 
 BLISSMIXER_ANALYSER_EXCLUDE_MEDIA_FOLDERS_DESC
 	EN	A list of media folders (as configured in the 'Basic Settings' page) that should <b>not</b> be analysed. Use this, for instance, if you have a media folder defined for audiobooks. Each folder should be on a new line.<br/><br/><b>NOTE:</b> You will need to save this setting before starting an analysis.
+	DE	Eine Liste von Medienordnern (wie auf der Seite 'Grundeinstellungen' konfiguriert), die <b>nicht</b> analysiert werden sollen. Verwenden Sie dies zum Beispiel, wenn Sie einen Medienordner für Hörbücher definiert haben. Jeder Ordner sollte in einer eigenen Zeile stehen.<br/><br/><b>HINWEIS:</b> Sie müssen diese Einstellung speichern, bevor Sie eine Analyse starten.
 
 BLISSMIXER_ANALYSIS_STATUS
 	EN	Status:
+	DE	Status:
 
 BLISSMIXER_ANALYSIS_START_TIME
 	EN	Start:
+	DE	Start:
 
 BLISSMIXER_ANALYSIS_DURATION
 	EN	Duration:
+	DE	Dauer:
 
 BLISSMIXER_ANALYSIS_SETTINGS_NOTE
 	EN	If you update any of the above settings then you will need to save these <i>before</i> starting analysis.<br/><br/>When an anlysis is running you will see some progress information below the 'Start Analysis' button. This will show the time elapsed and the names of some files. Files will not be displayed in order, as the list of files to analyse is split into chunks and processed in parallel. This output, therefore, is only to indicate that <i>something</i> is happening.<br/><br/>If you have updated the contents of the 'Ignore tracks' setting (above), saved settings, but have no new tracks, then you can use the 'Update ignore now' button to have the analyser update the ignore tracks column in its database.<br/><br/>
+	DE	Wenn Sie eine der obigen Einstellungen ändern, müssen Sie diese <i>vor</i> dem Start der Analyse speichern.<br/><br/>Während eine Analyse läuft, werden unter der Schaltfläche 'Analyse starten' Fortschrittsinformationen angezeigt. Diese zeigen die verstrichene Zeit und die Namen einiger Dateien. Dateien werden nicht in Reihenfolge angezeigt, da die zu analysierende Dateiliste in Blöcke aufgeteilt und parallel verarbeitet wird. Diese Ausgabe zeigt daher nur an, dass <i>etwas</i> geschieht.<br/><br/>Wenn Sie den Inhalt der Einstellung 'Tracks ignorieren' (oben) geändert und die Einstellungen gespeichert haben, aber keine neuen Tracks vorhanden sind, können Sie die Schaltfläche 'Ignore-Markierung aktualisieren' verwenden, damit der Analyser die Markierung ignorierter Tracks in seiner Datenbank aktualisiert.<br/><br/>
 
 BLISSMIXER_ANALYSIS_FAILURES_NOTE
 	EN	If the analyser fails to analyse files these failures are recorded in the database, so that these files are ignored (unless the files have been modified) on subsequent runs. The 'Clear Failures' button may be used to remove these records, so that the files are then re-analysed the next time you run the analyser.<br/><br/>
+	DE	Wenn der Analyser Dateien nicht analysieren kann, werden diese Fehler in der Datenbank gespeichert, sodass diese Dateien bei späteren Läufen ignoriert werden (sofern die Dateien nicht geändert wurden). Mit der Schaltfläche 'Fehler löschen' können diese Einträge entfernt werden, damit die Dateien beim nächsten Ausführen des Analysers erneut analysiert werden.<br/><br/>
 
 BLISSMIXER_ANALYSER_MAX_FILES
 	EN	Maximum files to analyse
+	DE	Maximale Anzahl zu analysierender Dateien
 
 BLISSMIXER_ANALYSER_MAX_FILES_DESC
 	EN	If you have a lot of files to analyse, you may wish to analyse these in chunks. If so, the you can configure the maximum number of files to be analysed here. Set to 0 to analyse all your files.
+	DE	Wenn Sie sehr viele Dateien analysieren müssen, möchten Sie diese möglicherweise in Blöcken analysieren. In diesem Fall können Sie hier die maximale Anzahl der zu analysierenden Dateien konfigurieren. Auf 0 setzen, um alle Dateien zu analysieren.
 
 BLISSMIXER_ANALYSER_MAX_THREADS
 	EN	Max threads
+	DE	Max. Threads
 
 BLISSMIXER_ANALYSER_MAX_THREADS_DESC
 	EN	Set the maximum number of threads that the analyser will use. If set to 0, then the analyser will use a maximum of 1 less than the number of cores of your CPU.
+	DE	Legt die maximale Anzahl von Threads fest, die der Analyser verwendet. Wenn auf 0 gesetzt, verwendet der Analyser höchstens einen Thread weniger als die Anzahl der CPU-Kerne.
 
 BLISSMIXER_ANALYSER_IGNORE
 	EN	Ignore tracks
+	DE	Tracks ignorieren
 
 BLISSMIXER_ANALYSER_IGNORE_DESC
 	EN	If you have have tracks n your library that you never want added to mixes, but as these are in your music collection they might be in your music queue and so could possibly be chosen as `seed` tracks for mixes, then you can use this setting to have the analyser mark these tracks as to be 'ignored' by the mixer. Each entry should be on a new line. For the format of these lines please refer to the <a href="https://raw.githubusercontent.com/CDrummond/bliss-analyser/refs/heads/master/UserGuide.md" target="_blank">user guide</a>).
+	DE	Wenn Ihre Musiksammlung Tracks enthält, die nie zu Mixen hinzugefügt werden sollen, die aber dennoch in Ihrer Play Queue landen und daher möglicherweise als `Seed`-Tracks für Mixe ausgewählt werden könnten, können Sie diese Einstellung verwenden, damit der Analyser diese Tracks für den Mixer als 'ignoriert' markiert. Jeder Eintrag sollte in einer eigenen Zeile stehen. Das Format dieser Zeilen ist im <a href="https://raw.githubusercontent.com/CDrummond/bliss-analyser/refs/heads/master/UserGuide.md" target="_blank">Benutzerhandbuch</a> beschrieben.
 
 BLISSMIXER_MIX_SETTINGS
 	EN	Mixer
+	DE	Mixer
 
 BLISSMIXER_MIX_SETTINGS_NOTE
 	EN	The following settings control how tracks are selected for mixes.
+	DE	Die folgenden Einstellungen steuern, wie Tracks für Mixe ausgewählt werden.
 
 BLISSMIXER_MATCH_ALL_GENRES
 	EN	Match all genres
+	DE	Alle Stilrichtungen abgleichen
 
 BLISSMIXER_MATCH_ALL_GENRES_DESC
 	EN	When checking if a track is in a genre group check all of the track's genres are in the group (if this option is enabled), otherwise check that any of the track's genres are in a group. e.g. if you have a group "Metal;Rock;Vocal" then if this option is set then a track with "Hard Rock;Vocal" would not match. If this option is not set then it would.
+	DE	Beim Prüfen, ob ein Track in einer Stilrichtungs-Gruppe ist, müssen bei aktivierter Option alle Stilrichtungen des Tracks in der Gruppe enthalten sein. Andernfalls genügt es, wenn eine der Stilrichtungen des Tracks in einer Gruppe enthalten ist. Beispiel: Wenn Sie eine Gruppe "Metal;Rock;Vocal" haben, würde bei aktivierter Option ein Track mit "Hard Rock;Vocal" nicht passen. Wenn diese Option nicht aktiviert ist, würde er passen.
