@@ -1,7 +1,8 @@
 # Mixing Algorithms
 
-BlissMixer supports three algorithms for selecting tracks similar to the current
-seed tracks. Each uses the same 23 audio features extracted by
+BlissMixer supports three runtime algorithms for selecting tracks similar to the
+current seed tracks, plus an optional learned-matrix extension for the adaptive
+weighting path. Each uses the same 23 audio features extracted by
 [bliss](https://lelele.io/bliss.html) (1× Tempo, 7× Timbre, 2× Loudness,
 13× Chroma) but differs in how similarity is measured and candidates are found.
 
@@ -459,6 +460,92 @@ normally over the full pool.
 > artists can still slip through. This prevents genre drift in heterogeneous
 > libraries while preserving variety and keeping bliss acoustic similarity as
 > the primary quality gate.
+
+---
+
+## Learned Matrix / Metric Learning
+
+The learned matrix is **not a fourth candidate-search algorithm**. It is an
+optional personalised Mahalanobis distance matrix that can be loaded by
+`bliss-mixer` and used by the Adaptive Weighting path.
+
+Without survey/training there is no learned matrix. The user has to collect
+training data first, then explicitly train the matrix.
+
+### User flow
+
+1. Open the similarity survey page from the BlissMixer settings.
+2. Complete repeated "which one is the odd one out?" rounds. Each round shows
+   three songs; two should feel more similar to each other than the third.
+3. The plugin stores the answer as one training triplet.
+4. After enough rounds, click **Train** in the settings page.
+5. `bliss-learner` reads the triplets and the bliss feature database, trains a
+   23x23 matrix, and writes `learned_matrix.json`.
+6. The next time `bliss-mixer` starts, the plugin passes the matrix path with
+   `--matrix`, and adaptive weighting can use it for distance calculation.
+
+### Data flow
+
+```mermaid
+flowchart TD
+    U[User survey answers] --> T[training_triplets.json]
+    T --> L[bliss-learner]
+    DB[(bliss.db<br/>23 features per track)] --> L
+    L --> M[learned_matrix.json<br/>23x23 Mahalanobis matrix]
+    M --> MX[bliss-mixer<br/>--matrix]
+    MX --> A[Adaptive weighting]
+
+    style DB fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style T fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style M fill:#fef3c7,stroke:#f59e0b,color:#5c4813
+    style L fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style MX fill:#e0e7ff,stroke:#4f46e5,color:#1e2a5f
+```
+
+### What is stored
+
+- **Training triplets:** Stored in `training_triplets.json` in the LMS prefs
+  directory. Each triplet references songs by file path, so if files are moved,
+  renamed, or removed, those triplets may no longer be usable for future
+  retraining and should be skipped or cleaned up.
+- **Learned matrix:** Stored in `learned_matrix.json`. This is just a 23x23
+  matrix over the bliss feature space. It does **not** contain song paths and is
+  not tied to specific tracks.
+
+This distinction matters: library changes can affect the stored triplets used
+for future retraining, but they do not invalidate an already trained matrix.
+Newly added tracks can still be scored with the existing matrix as long as they
+have bliss features in `bliss.db`.
+
+### Runtime behaviour
+
+- **Single seed:** Variance-based weighting cannot be computed from one seed.
+  If a learned matrix is available, adaptive weighting can use the learned
+  matrix directly instead of falling back to static weights.
+- **Multiple seeds:** Adaptive weighting first computes the variance-based
+  matrix from the seed tracks. If a learned matrix is available, the two
+  matrices are blended:
+
+  `M = alpha * M_learned + (1 - alpha) * M_variance`
+
+  where `alpha = learnedblend / 100`.
+- **Blend control:** `0` means pure variance-based weighting, `100` means pure
+  learned matrix, and intermediate values mix the two.
+
+### Portability
+
+The trained matrix is portable. Since it is only a 23x23 matrix over the bliss
+feature space and contains no song paths, it can be exported, imported, and
+reused on another Lyrion/bliss setup that uses the same feature definitions.
+
+### Trade-off
+
+The learned matrix can improve results for some libraries and listening
+patterns, but the user cost is high: the user has to complete enough survey
+rounds before training becomes meaningful. For most users, variance-based
+adaptive weighting gives an immediate benefit without this training step.
+
+For implementation details, see [METRIC_LEARNING.md](METRIC_LEARNING.md).
 
 ---
 
