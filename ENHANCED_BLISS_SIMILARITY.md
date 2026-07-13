@@ -10,10 +10,13 @@
 
 This document is the shared design record for improving how Bliss represents,
 compares, and selects music. The primary goal is better mixing quality through
-better song-similarity criteria. Candidate improvements include psychoacoustic
-descriptors, temporal structure, segmentation, structural variance, and
-task-specific scoring. Transition-aware track selection is one important use
-case enabled by those improvements, not the full scope of the design.
+better song-similarity criteria. Candidate improvements include perceptually
+motivated audio descriptors; time-varying representations that preserve how a
+track develops; detection of section boundaries and coherent musical segments;
+summaries of repetition and change across a track; and separate scoring criteria
+for whole-track similarity, session or context fit, and transitions.
+Transition-aware track selection is one important use case enabled by those
+improvements, not the full scope of the design.
 
 The document captures the current proposal, its evidence base, assumptions that
 still need verification, and the decisions that remain open.
@@ -660,17 +663,29 @@ them for a particular task without discarding the strong existing baseline.
 
 - **Descriptor/feature:** A measured property of audio, such as tempo, a timbre
   coefficient, loudness, chroma, or a future experimental measurement.
+- **Perceptually motivated descriptor:** A measurement designed around a
+  hypothesis about human hearing or musical perception. The motivation does not
+  establish perceptual validity; listener and task evaluation remain required.
 - **Representation:** The collection and organization of descriptors used to
   describe a track, window, segment, or anchor.
+- **Temporal representation:** Time-ordered measurements or vectors that retain
+  how audio properties develop instead of reducing the complete track
+  immediately to one aggregate vector.
 - **Baseline vector:** The existing 23-feature whole-track Bliss vector.
 - **Enhanced metadata:** Any versioned experimental descriptor or temporal
   representation added by this design.
 - **Global score:** A whole-track or whole-context score produced by the selected
   existing or experimental similarity criterion.
 - **Segment:** A time range intended to represent a coherent musical section.
+- **Segmentation:** The process of proposing boundaries and coherent time ranges
+  from temporal evidence. It need not assign names such as verse or chorus, and
+  multiple structural levels or interpretations may be valid.
 - **Anchor:** A local analysis window representing an intro or outro.
 - **Transition score:** A compatibility score between the current track's outro
   anchor and a candidate's intro anchor.
+- **Task-specific scoring:** A similarity or compatibility function defined for
+  one use case, such as whole-track retrieval, session fit, or directional
+  transition quality, rather than one universal music distance.
 - **Candidate pool:** The tracks retained from the global algorithm before final
   truncation.
 - **Reranking:** Reordering that candidate pool using transition information.
