@@ -44,34 +44,45 @@ potential limitations that this design investigates:
 1. **Descriptor limitations:** some physical audio measurements may correlate
    imperfectly with perceived musical similarity. Psychoacoustic weighting,
    loudness modeling, or additional rhythmic and timbral descriptors may help.
+   See [Enhanced analysis design](#enhanced-analysis-design) and
+   [Psychoacoustic scope](#psychoacoustic-scope).
 2. **Temporal aggregation:** reducing a complete track to one vector can hide
-   intros, outros, structural changes, and distinct musical sections.
+   intros, outros, structural changes, and distinct musical sections. See
+   [Temporal windows and segmentation](#temporal-windows-and-segmentation).
 3. **One representation serving several questions:** whole-song similarity,
    current-session coherence, and boundary-to-boundary transition quality are
-   related but not identical objectives.
+   related but not identical objectives. See [Logical layers](#logical-layers)
+   and [Transition-aware selection](#transition-aware-selection).
 4. **Retrieval, variety, and ordering are conflated:** finding relevant tracks,
    choosing a varied subset, and arranging that subset into a good sequence are
-   separate optimization problems.
+   separate optimization problems. See [Similarity and mixing
+   design](#similarity-and-mixing-design) and [Diversity and exploration
+   policy](#diversity-and-exploration-policy).
 
 The working proposal is therefore a layered enhancement programme:
 
-1. preserve the existing 23-feature vectors and algorithms as the compatible
-   baseline;
-2. first test scoring and selection improvements that can use existing data,
-   including population-aware weighting, learned personalization, and an
-   explicit variety policy;
-3. produce versioned, experimental analysis data offline through optional
-   structured `bliss-rs` products and an application-owned sidecar, including
-   perceptual descriptors, confidence estimates, and temporal representations;
-4. evaluate which new data improves whole-track similarity and adaptive mixing;
-5. use task-specific views of the analysis where appropriate; for example,
-   structural summaries for global similarity and outro/intro anchors for
-   transition-aware reranking.
+1. [Preserve the existing 23-feature vectors and
+   algorithms](#baseline-and-extension-strategy) as the compatible baseline.
+2. First test scoring and selection improvements that can use existing data,
+   including [population-aware weighting](#population-aware-adaptive-weighting),
+   [learned personalization](#learned-personalization-and-feedback), and an
+   explicit [variety policy](#diversity-and-exploration-policy).
+3. Produce [versioned, experimental analysis data
+   offline](#proposed-architecture) through optional `bliss-rs` analysis
+   products and an [application-owned sidecar](#metadata-ownership-and-schema),
+   including perceptual descriptors, confidence estimates, and temporal
+   representations.
+4. [Evaluate](#evaluation-plan) which new data improves whole-track similarity
+   and adaptive mixing.
+5. Use [task-specific views](#logical-layers) of the analysis where appropriate;
+   for example, structural summaries for global similarity and outro/intro
+   anchors for [transition-aware reranking](#transition-aware-selection).
 
 No single proposed descriptor is assumed to be an improvement. New criteria
-must be defined precisely and validated through retrieval tests and listener
-feedback. The first implementation should establish an extensible analysis and
-evaluation path rather than prematurely committing to a large new vector.
+must be defined precisely and validated through the [retrieval tests and
+listener feedback](#evaluation-plan). The first implementation should establish
+an extensible analysis and evaluation path rather than prematurely committing
+to a large new vector.
 
 ## Current system
 
