@@ -172,6 +172,90 @@ playlist morphing. These ideas inform both this design and
 [PATH_INTERPOLATION.md](PATH_INTERPOLATION.md), but they are not evidence that
 MusicIP analyzed intro/outro anchors or optimized crossfades.
 
+## Current alternatives and comparison baselines
+
+There are current alternatives at the application, analysis-toolkit, and
+learned-representation levels, but no clear drop-in replacement for the complete
+Bliss design point: a lightweight Rust analysis library, a compact canonical
+versioned vector, reusable distance and playlist utilities, and established MPD
+and LMS consumers. The detailed analysis-layer comparison and its implications
+for `bliss-rs` live in the companion [Bliss Analysis
+Evolution](https://github.com/chrober/bliss-rs/blob/feature/analysis-evolution/BLISS_RS_ANALYSIS_EVOLUTION.md#current-alternatives-and-comparison-systems)
+document.
+
+### AudioMuse-AI
+
+[`AudioMuse-AI`](https://github.com/NeptuneHub/AudioMuse-AI) is the closest
+current open-source comparator at the self-hosted product level. It provides
+local sonic analysis, similar-song playlists, clustering, song paths, maps,
+listening-derived profiles, add/subtract interaction, and integrations including
+LMS/Lyrion. Its [published documentation](https://neptunehub.github.io/AudioMuse-AI/)
+lists Lyrion as supported and links an unofficial Lyrion plugin, so it is
+already a deployable alternative for Lyrion users rather than a possible future
+competitor. It is therefore relevant to the complete
+`analyzer + similarity service + player integration` architecture described
+here.
+
+It is not a drop-in library replacement. It is an AGPL, Dockerized application
+stack built around Python, ONNX/librosa-oriented analysis, service storage, and
+web APIs. Configurable modes may combine acoustic evidence with CLAP, learned
+tags, lyrics, or text. A fair sonic-similarity comparison must therefore report
+an audio-only configuration separately from hybrid or multimodal modes. It
+should be treated as an end-to-end system baseline, not as an ablation of one
+Bliss descriptor.
+
+AudioMuse-AI can run on ARM and has been tested on a Raspberry Pi 5 with 8 GB
+RAM and NVMe storage; its [FAQ](https://neptunehub.github.io/AudioMuse-AI/FAQ/)
+suggests four cores, 8 GB RAM, and SSD-class storage. That demonstrates
+feasibility on a well-equipped Pi 5, but does not establish optimal operation on
+the wider range of Raspberry Pi systems used for Lyrion. Older CPUs, less RAM,
+microSD storage, and concurrent player duties may materially change analysis,
+clustering, and idle behavior. Hardware suitability must therefore be measured,
+not inferred from feature availability.
+
+### Analysis and representation baselines
+
+[`Essentia`](https://github.com/MTG/essentia) is the strongest current
+alternative analysis framework. Its
+[`MusicExtractor`](https://essentia.upf.edu/tutorial_extractors_musicextractor.html)
+offers a much larger spectral, psychoacoustic, loudness, rhythm, tonal, and chord
+inventory, while its [model catalogue](https://essentia.upf.edu/models.html)
+includes Discogs-derived, musicnn, and MAEST inference options. That breadth is
+valuable for prototyping and cross-checking hypotheses, but does not provide one
+canonical vector, distance, persistence contract, or mixer.
+
+[`librosa`](https://librosa.org/doc/latest/feature.html) plus learned
+representations such as
+[`musicnn`](https://github.com/jordipons/musicnn), MAEST, or
+[MERT](https://openreview.net/pdf?id=w3YZ9MSlBu) provides a flexible research
+stack. Such a stack still needs declared frame selection, pooling, model
+identity, normalization, storage, indexing, and playlist policy. These are
+component baselines, not finished Bliss alternatives.
+
+### Proprietary behavioral reference
+
+[Plex Sonic
+Analysis](https://support.plex.tv/articles/sonic-analysis-music/) demonstrates
+a current polished experience with sonically similar tracks, artists and
+albums, track and album radio, and generated mixes. Its closed representation
+cannot validate this proposal or serve as a reproducible algorithmic baseline;
+it is useful as a product and UX reference.
+
+The practical comparison policy is therefore:
+
+- compare AudioMuse-AI audio-only results at the complete-system level where
+  deployment is feasible;
+- include representative Raspberry Pi/Lyrion hardware in that comparison and
+  measure initial and incremental analysis, clustering, idle footprint, storage
+  traffic, and playback interference;
+- compare named Essentia/librosa descriptors and learned embeddings under a
+  common local scoring and evaluation harness;
+- keep multimodal and metadata-assisted systems in a separate hybrid baseline;
+- report quality together with compute, storage, licensing, reproducibility,
+  explainability, and schema stability;
+- retain the existing Bliss path unless another approach demonstrates enough
+  benefit to justify its migration and reanalysis cost.
+
 ## Research foundation and evidence status
 
 ### Scope and research questions
@@ -1932,6 +2016,28 @@ Evaluate new descriptors and representations through:
 Structural and temporal features need their own ablations. A higher-dimensional
 model that merely memorizes the evaluation library is not an improvement.
 
+### External system and representation baselines
+
+Where practical, run AudioMuse-AI over the same library in a declared
+audio-only configuration. Compare neighbor and playlist outcomes, resource
+cost, analysis coverage, and failure behavior, but treat it as an end-to-end
+system comparison rather than evidence for or against one descriptor. Report
+any CLAP-, lyrics-, text-, tag-, or metadata-assisted mode as a separate hybrid
+baseline.
+
+Run the comparison on representative deployment hardware rather than only a
+development workstation. At minimum, distinguish the documented Raspberry Pi 5
+8 GB/NVMe configuration from older, lower-memory, or microSD-based Lyrion
+systems, and record concurrent playback behavior as well as offline throughput.
+
+Essentia/librosa descriptors and MAEST, musicnn, or MERT embeddings should be
+evaluated as identified representation components under the same retrieval,
+pooling, diversity, and listener-evaluation harness used for Bliss experiments.
+Exact versions, model artifacts, input windows, pooling, normalization, and
+index configuration must be recorded. Plex Sonic Analysis can inform UX and,
+where the same private library is available, an informal playlist comparison;
+its closed implementation is not a reproducible algorithmic control.
+
 ### Context-profile, diversity, and coherence evaluation
 
 Evaluate multi-seed and group representations on both compact and deliberately
@@ -2110,6 +2216,9 @@ contracts still follow the ownership boundary above.
 | A skip caused by a section boundary is learned as dislike | Retain within-track time and queue context; do not convert isolated skips directly into preference triplets. |
 | Learned and seed-derived matrices have incompatible scale | Normalize both against a declared convention before blending. |
 | A learned matrix is applied to incompatible Bliss features | Embed feature and model schema versions and reject mismatches. |
+| An external system appears better because it also uses lyrics, tags, metadata, clustering, or different playlist policy | Separate audio-only, hybrid, representation, retrieval, and full-system comparisons. |
+| A broad toolkit or learned model becomes an accidental production dependency | Keep comparison backends separable; review licensing, model provenance, packaging, compute, and reproducibility before adoption. |
+| Availability for Lyrion is mistaken for acceptable performance on every Raspberry Pi server | Benchmark representative Pi generations, RAM sizes, and storage classes during both analysis and playback. |
 | Experimental features silently change baseline semantics | Store them separately and version every representation. |
 | The enhanced analyzer duplicates or diverges from `bliss-rs` DSP | Consume structured `bliss-rs` products and isolate only explicitly experimental external algorithms. |
 | Dense temporal data slows normal mixing | Separate hot runtime products from cold rebuildable frame sequences. |
@@ -2179,8 +2288,14 @@ duplicated here.
     default?
 24. Which local-versus-global coherence measure predicts listener-rated flow
     without rewarding homogeneous or boring playlists?
+25. Which reproducible audio-only AudioMuse-AI configuration should serve as an
+    end-to-end baseline, and how should its retrieval and playlist policy be
+    separated from representation quality?
+26. Which Raspberry Pi configurations can run AudioMuse-AI analysis and
+    clustering alongside Lyrion without unacceptable memory, storage, thermal,
+    or playback impact, and how does that compare with the Bliss pipeline?
 
-## Historical and implementation evidence
+## Historical, implementation, and comparison evidence
 
 - Bliss [`Analysis`](https://docs.rs/bliss-audio/latest/bliss_audio/struct.Analysis.html)
   and [`AnalysisIndex`](https://docs.rs/bliss-audio/latest/bliss_audio/enum.AnalysisIndex.html)
@@ -2203,6 +2318,25 @@ duplicated here.
 - The public [`libofa` source
   package](https://sources.debian.org/src/libofa/0.9.3-15/) is fingerprinting
   code; it is not treated here as the MusicIP similarity implementation.
+- [`AudioMuse-AI`](https://github.com/NeptuneHub/AudioMuse-AI) documents the
+  closest current open-source self-hosted comparison system, while its
+  [configuration reference](https://neptunehub.github.io/AudioMuse-AI/PARAMETERS/)
+  shows why audio-only and multimodal modes must be evaluated separately.
+  Its [main documentation](https://neptunehub.github.io/AudioMuse-AI/) and
+  [FAQ](https://neptunehub.github.io/AudioMuse-AI/FAQ/) document current Lyrion
+  support, ARM operation, and the tested Raspberry Pi 5 8 GB/NVMe profile.
+- [`Essentia`](https://github.com/MTG/essentia), its
+  [`MusicExtractor`](https://essentia.upf.edu/tutorial_extractors_musicextractor.html),
+  and its [model catalogue](https://essentia.upf.edu/models.html) provide
+  current descriptor and learned-representation baselines, not a prescribed
+  mixer contract.
+- [librosa feature extraction](https://librosa.org/doc/latest/feature.html) and
+  [`musicnn`](https://github.com/jordipons/musicnn) provide research building
+  blocks whose pooling, schema, distance, and deployment policy remain the
+  responsibility of the experiment.
+- [Plex Sonic
+  Analysis](https://support.plex.tv/articles/sonic-analysis-music/) documents a
+  closed current product reference for similar tracks, radio, and mixes.
 
 ## Related documents
 
@@ -2233,3 +2367,7 @@ duplicated here.
 - [`blissify-rs`](https://github.com/Polochon-street/blissify-rs) - the
   `bliss-rs` author's MPD application and the original database, playlist, and
   Mahalanobis-matrix consumption context for `bliss-metric-learning`.
+- [`AudioMuse-AI`](https://github.com/NeptuneHub/AudioMuse-AI) - current
+  self-hosted end-to-end comparison system with sonic analysis, similarity,
+  clustering, paths, and LMS/Lyrion integration; it is a separate application
+  stack rather than a `bliss-rs` consumer.
