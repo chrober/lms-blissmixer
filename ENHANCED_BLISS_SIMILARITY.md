@@ -86,14 +86,19 @@ The existing architecture is described in [ALGORITHMS.md](ALGORITHMS.md):
   [`AnalysisIndex`](https://docs.rs/bliss-audio/latest/bliss_audio/enum.AnalysisIndex.html),
   [`Analysis`](https://docs.rs/bliss-audio/latest/bliss_audio/struct.Analysis.html),
   and [changelog](https://docs.rs/crate/bliss-audio/0.11.2/source/CHANGELOG.md).
-- The [`chrober/bliss-mixer`](https://github.com/chrober/bliss-mixer) fork reads
+- The upstream
+  [`CDrummond/bliss-mixer`](https://github.com/CDrummond/bliss-mixer) reads
   those precomputed features and exposes the HTTP mixing API used by this
-  design. It derives from the original
-  [`CDrummond/bliss-mixer`](https://github.com/CDrummond/bliss-mixer).
+  design.
+- The [`chrober/bliss-mixer`](https://github.com/chrober/bliss-mixer) fork
+  retains that upstream behavior and adds variance-based weighting plus
+  learned-matrix loading, direct use, and blending support.
 - `lms-blissmixer` selects seeds, starts and calls the mixer fork, applies LMS
   integration behavior, and adds returned tracks to the queue.
-- Static Weights, Extended Isolation Forest, and Adaptive Weighting use
-  different candidate-search and scoring methods over the same feature data.
+- Static Weights and Extended Isolation Forest are inherited mixer strategies.
+  The fork's variance-based Adaptive Weighting is a third strategy, with the
+  learned matrix available as an optional metric extension rather than a fourth
+  candidate-search algorithm.
 - The integrated similarity survey and `bliss-learner` are a project-specific
   experiment added to `lms-blissmixer`, not an upstream `bliss-rs` capability.
   The learner is a standalone Rust port of the upstream
@@ -2218,9 +2223,10 @@ duplicated here.
   `TracksV2` schema, JSON artifacts, and progress notifications; it is not an
   upstream Bliss component.
 - [`chrober/bliss-mixer`](https://github.com/chrober/bliss-mixer) - the fork
-  that loads `bliss-learner` output through `--matrix`, applies its Mahalanobis
-  metric directly for a single seed, and can blend it with seed-variance
-  weighting for multiple seeds.
+  that adds variance-based Adaptive Weighting and learned-matrix support to the
+  upstream mixer. It loads `bliss-learner` output through `--matrix`, applies
+  its Mahalanobis metric directly for a single seed, and can blend it with
+  seed-variance weighting for multiple seeds.
 - [`bliss-metric-learning`](https://github.com/Polochon-street/bliss-metric-learning)
   - the `bliss-rs` author's explicitly experimental Python survey and metric
   trainer from which `bliss-learner` ports the core algorithm.
