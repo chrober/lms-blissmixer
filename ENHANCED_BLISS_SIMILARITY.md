@@ -216,18 +216,18 @@ experimental controls; they do not establish production defaults.
 
 Schweiger, Parada-Cabaleiro, and Schedl distinguish order-independent diversity
 from order-dependent coherence. In their formulation, coherence relates local
-adjacent-track deviation to variation across the full playlist [[M1]](#m1). A
+adjacent-track deviation to variation across the full playlist [[1]](#m1). A
 playlist may therefore be globally diverse and locally smooth, while a
 homogeneous playlist can appear smooth under an adjacency-only measure without
 having a meaningful trajectory.
 
 Bittner et al. likewise separate sequencing a fixed playlist from optimizing
-the rendered transition regions [[M2]](#m2). Their small professional-curator
+the rendered transition regions [[2]](#m2). Their small professional-curator
 study supports the value of acoustic sequencing, but its scope is insufficient
 to choose an algorithm or default for heterogeneous LMS libraries. Liebman et
 al. independently describe preference learning and sequence planning as
 separate components and include diversity and novelty in the planning reward
-[[M18]](#m18).
+[[18]](#m18).
 
 Together this evidence supports the logical separation of relevance retrieval,
 diversity policy, and sequencing. It does not validate percentile-rank fusion,
@@ -238,7 +238,7 @@ score weight.
 
 Logan directly studied acoustic recommendation from song sets and compared a
 combined set model with mean, median, and minimum distances to individual set
-members [[M4]](#m4). For album completion with the studied timbre measure,
+members [[4]](#m4). For album completion with the studied timbre measure,
 minimum distance performed best and median distance exceeded mean distance.
 This does not establish minimum distance as a general rule: the labels were
 album membership, the representation was timbral, and minimum distance can
@@ -248,9 +248,9 @@ model and that a centroid cannot be assumed to be sufficient.
 Context-aware recommendation studies provide adaptation evidence for keeping
 intrinsic audio, listening history, cultural context, and situational context
 as distinguishable inputs. Joint acoustic and cultural models improved the
-reported recommendation results of Zangerle, Pichl, and Schedl [[M16]](#m16),
+reported recommendation results of Zangerle, Pichl, and Schedl [[16]](#m16),
 and Pichl and Zangerle reported gains from combining acoustic and situational
-contexts [[M17]](#m17). These results support late fusion and context-specific
+contexts [[17]](#m17). These results support late fusion and context-specific
 profiles, not the proposed population-distinctiveness equation.
 
 The population-aware weighting formula and the choice among centre,
@@ -262,13 +262,13 @@ sets plus artist- and album-disjoint controls.
 
 Lee et al. model genre, mood, instrumentation, and tempo as distinct but
 combinable similarity dimensions and report improvements over global and
-specialized alternatives, including a listener study [[M5]](#m5). This
+specialized alternatives, including a listener study [[5]](#m5). This
 supports a shared analysis layer with task-conditioned views rather than one
 unqualified distance for every mixer operation.
 
 Flexer, Lallai, and Rasi found higher agreement within the same listener than
 between listeners, lower agreement in their single-genre study, genre influence
-on judgments, and an effect from listener mood [[M6]](#m6). Consequently,
+on judgments, and an effect from listener mood [[6]](#m6). Consequently,
 "general similarity" labels are neither objective nor interchangeable with
 transition or playlist-quality judgments. Evaluation should report rater
 uncertainty and use labels that match the scoring task.
@@ -276,7 +276,7 @@ uncertainty and use labels that match the scoring task.
 ### Diversity and exploration
 
 Nassif et al. compared Jaccard-based and relevance-aware submodular
-diversification on Amazon Music [[M7]](#m7). In their large online experiment,
+diversification on Amazon Music [[7]](#m7). In their large online experiment,
 the submodular treatment produced a statistically significant increase in
 minutes streamed relative to the relevance-only baseline, while retaining item
 relevance within the objective. This is direct evidence that a separate
@@ -286,29 +286,29 @@ feature-space diversity.
 
 MMR, clustering, submodular coverage, and DPP-like selection are therefore
 candidate policies, not equivalent evidence-backed defaults. MMR originates as
-a general relevance-versus-novelty reranking criterion [[M19]](#m19). DPPs
+a general relevance-versus-novelty reranking criterion [[19]](#m19). DPPs
 provide a principled general model for selecting high-quality, mutually
-dissimilar sets [[M8]](#m8). Neither general method has a music- or
+dissimilar sets [[8]](#m8). Neither general method has a music- or
 LMS-specific guarantee. Every policy must be compared on relevance, objective
 diversity, repetition, order-dependent coherence, and listener perception.
 
 ### Explicit preference and active metric learning
 
 Schultz and Joachims provide a foundational formulation for learning a distance
-metric from relative comparisons [[M9]](#m9). That supports the current
+metric from relative comparisons [[9]](#m9). That supports the current
 odd-one-out-to-triplet representation, while leaving the choice of loss,
 regularization, and matrix capacity open.
 
 Stochastic Triplet Embedding provides a probabilistic objective for learning an
-item embedding from triplet judgments [[M20]](#m20). It supports the algorithm
+item embedding from triplet judgments [[20]](#m20). It supports the algorithm
 family used by the learner, but its original object-embedding problem is not the
 same as learning a portable Mahalanobis transform over fixed Bliss features.
 
 Tamuz et al. show that information-gain-driven relative-similarity questions
-can reduce human comparison effort [[M10]](#m10). Xiong et al. apply an
+can reduce human comparison effort [[10]](#m10). Xiong et al. apply an
 information-theoretic criterion specifically to active metric learning from
 relative comparisons and report improvements over baseline query policies
-[[M11]](#m11). Both works support replacing uniform random questions with an
+[[11]](#m11). Both works support replacing uniform random questions with an
 active experiment. Neither validates the current feature representation, the
 proposed near-tie/disagreement heuristic, or fixed judgment thresholds for
 family, diagonal, low-rank, and full models.
@@ -322,17 +322,17 @@ effort, not merely higher training-triplet accuracy.
 
 Alonso-Jimenez et al. found playlist co-occurrence useful as weak supervision
 for music representation learning, outperforming same-artist positive pairs for
-their similarity evaluation [[M12]](#m12). Ragno, Burges, and Herley infer
+their similarity evaluation [[12]](#m12). Ragno, Burges, and Herley infer
 similarity and asymmetric transitions from adjacency in authored streams
-[[M14]](#m14), while Maillet et al. learn song-transition probabilities from
-professional radio playlists and audio features [[M15]](#m15). These results
+[[14]](#m14), while Maillet et al. learn song-transition probabilities from
+professional radio playlists and audio features [[15]](#m15). These results
 support playlist and sequence data as contextual supervision. They do not show
 that co-occurrence is an intrinsic acoustic similarity label or a particular
 listener's stable preference.
 
 Montecchio, Roy, and Pachet show that the within-track distribution of skips is
 closely related to musical structure and can help train a structure predictor
-[[M13]](#m13). This is useful evidence, but also a warning: a skip may be
+[[13]](#m13). This is useful evidence, but also a warning: a skip may be
 caused by a section boundary, queue position, interruption, or exposure rather
 than dislike. Behavioral observations require event type, within-track time,
 queue context, confidence, and decay. Explicit transition questions remain the
@@ -341,7 +341,7 @@ cleaner label for directional boundary quality.
 ### Boundary-aware sequence and transition evidence
 
 Flexer et al. construct paths between start and end tracks and remove candidates
-that are far from both endpoints [[M3]](#m3). Their result supports global
+that are far from both endpoints [[3]](#m3). Their result supports global
 relevance constraints before path construction and documents failure when the
 catalog lacks plausible bridge material. It does not directly validate
 one-step next-track selection.
@@ -349,7 +349,7 @@ one-step next-track selection.
 Bittner et al. use key, mode, tempo, and learned acoustic features for
 sequencing, then use structural boundaries, downbeats, beat-synchronous timbre,
 chroma, loudness, and vocal presence to choose transition regions
-[[M2]](#m2). This is the closest direct support for boundary-aware analysis in
+[[2]](#m2). This is the closest direct support for boundary-aware analysis in
 the proposal. Their system renders DJ-style crossfades, whereas the current LMS
 proposal only chooses a next track. The fixed `outro_vector -> intro_vector`
 distance is therefore a baseline inspired by the same task decomposition, not
@@ -385,6 +385,114 @@ The mixer literature motivates the following falsifiable hypotheses:
 Negative results are useful. They can reject unnecessary descriptors,
 over-capacity personal models, misleading feedback signals, or sequence
 objectives that merely produce homogeneous playlists.
+
+### Scientific bibliography
+
+<a id="m1"></a>**[1]** H. Schweiger, E. Parada-Cabaleiro, and M. Schedl,
+"[The Impact of Playlist Characteristics on Coherence in User-Curated Music
+Playlists](https://link.springer.com/article/10.1140/epjds/s13688-025-00531-3),"
+*EPJ Data Science*, vol. 14, article 24, 2025.
+
+<a id="m2"></a>**[2]** R. M. Bittner, M. Gu, G. Hernandez,
+E. J. Humphrey, T. Jehan, P. H. McCurry, and N. Montecchio,
+"[Automatic Playlist Sequencing and
+Transitions](https://archives.ismir.net/ismir2017/paper/000086.pdf)," ISMIR,
+2017.
+
+<a id="m3"></a>**[3]** A. Flexer, D. Schnitzer, M. Gasser, and G. Widmer,
+"[Playlist Generation Using Start and End
+Songs](https://www.cp.jku.at/research/papers/Flexer_etal_ISMIR_2008.pdf),"
+ISMIR, 2008.
+
+<a id="m4"></a>**[4]** B. Logan,
+"[Music Recommendation from Song
+Sets](https://shiftleft.com/mirrors/www.hpl.hp.com/techreports/2004/HPL-2004-148.pdf),"
+ISMIR, 2004; HP Laboratories Technical Report HPL-2004-148.
+
+<a id="m5"></a>**[5]** J. Lee, N. J. Bryan, J. Salamon, Z. Jin, and J. Nam,
+"[Disentangled Multidimensional Metric Learning for Music
+Similarity](https://www.justinsalamon.com/uploads/4/3/9/4/4394963/lee_disentangledmusicsim_icassp2020.pdf),"
+ICASSP, 2020.
+
+<a id="m6"></a>**[6]** A. Flexer, T. Lallai, and K. Rasi,
+"[On Evaluation of Inter- and Intra-Rater Agreement in Music
+Recommendation](https://doi.org/10.5334/tismir.107)," *Transactions of the
+International Society for Music Information Retrieval*, vol. 4, no. 1,
+pp. 182-194, 2021.
+
+<a id="m7"></a>**[7]** H. Nassif, K. O. Cansizlar, M. Goodman, and
+S. V. N. Vishwanathan,
+"[Diversifying Music
+Recommendations](https://pages.cs.wisc.edu/~hous21/papers/ICMLW16.pdf),"
+Machine Learning for Music Discovery Workshop at ICML, 2016.
+
+<a id="m8"></a>**[8]** A. Kulesza and B. Taskar,
+"[Determinantal Point Processes for Machine
+Learning](https://www.nowpublishers.com/article/Details/MAL-044),"
+*Foundations and Trends in Machine Learning*, vol. 5, nos. 2-3,
+pp. 123-286, 2012.
+
+<a id="m9"></a>**[9]** M. Schultz and T. Joachims,
+"[Learning a Distance Metric from Relative
+Comparisons](https://papers.nips.cc/paper_files/paper/2003/hash/d3b1fb02964aa64e257f9f26a31f72cf-Abstract.html),"
+NeurIPS, 2003.
+
+<a id="m10"></a>**[10]** O. Tamuz, C. Liu, S. Belongie, O. Shamir, and
+A. T. Kalai,
+"[Adaptively Learning the Crowd
+Kernel](https://icml.cc/2011/papers/395_icmlpaper.pdf)," ICML, 2011.
+
+<a id="m11"></a>**[11]** S. Xiong, R. Rosales, Y. Pei, and X. Z. Fern,
+"[Active Metric Learning from Relative
+Comparisons](https://arxiv.org/abs/1409.4155)," arXiv:1409.4155, 2014.
+
+<a id="m12"></a>**[12]** P. Alonso-Jimenez, X. Favory, H. Foroughmand,
+G. Bourdalas, X. Serra, T. Lidy, and D. Bogdanov,
+"[Pre-Training Strategies Using Contrastive Learning and Playlist Information
+for Music Classification and Similarity](https://arxiv.org/abs/2304.12257),"
+ICASSP, 2023, DOI 10.1109/ICASSP49357.2023.10095058.
+
+<a id="m13"></a>**[13]** N. Montecchio, P. Roy, and F. Pachet,
+"[The Skipping Behavior of Users of Music Streaming Services and Its Relation
+to Musical
+Structure](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0239418),"
+*PLOS ONE*, vol. 15, no. 9, e0239418, 2020.
+
+<a id="m14"></a>**[14]** R. Ragno, C. J. C. Burges, and C. Herley,
+"[Inferring Similarity Between Music Objects with Application to Playlist
+Generation](https://www.microsoft.com/en-us/research/publication/inferring-similarity-between-music-objects-with-application-to-playlist-generation/),"
+ACM MIR, 2005.
+
+<a id="m15"></a>**[15]** F. Maillet, D. Eck, G. Desjardins, and P. Lamere,
+"[Steerable Playlist Generation by Learning Song Similarity from Radio Station
+Playlists](https://ismir2009.ismir.net/proceedings/OS4-2.pdf)," ISMIR, 2009.
+
+<a id="m16"></a>**[16]** E. Zangerle, M. Pichl, and M. Schedl,
+"[User Models for Culture-Aware Music Recommendation: Fusing Acoustic and
+Cultural Cues](https://transactions.ismir.net/articles/10.5334/tismir.37),"
+*Transactions of the International Society for Music Information Retrieval*,
+vol. 3, no. 1, 2020.
+
+<a id="m17"></a>**[17]** M. Pichl and E. Zangerle,
+"[User Models for Multi-Context-Aware Music
+Recommendation](https://link.springer.com/article/10.1007/s11042-020-09890-7),"
+*Multimedia Tools and Applications*, vol. 80, pp. 22509-22531, 2021.
+
+<a id="m18"></a>**[18]** E. Liebman, P. Khandelwal,
+M. Saar-Tsechansky, and P. Stone,
+"[Designing Better Playlists with Monte Carlo Tree
+Search](https://ojs.aaai.org/index.php/AAAI/article/view/19100)," AAAI,
+vol. 31, no. 2, pp. 4715-4720, 2017.
+
+<a id="m19"></a>**[19]** J. G. Carbonell and J. Goldstein,
+"[The Use of MMR, Diversity-Based Reranking for Reordering Documents and
+Producing Summaries](https://doi.org/10.1145/290941.291025)," SIGIR,
+pp. 335-336, 1998.
+
+<a id="m20"></a>**[20]** L. van der Maaten and K. Q. Weinberger,
+"[Stochastic Triplet
+Embedding](https://doi.org/10.1109/MLSP.2012.6349720)," IEEE International
+Workshop on Machine Learning for Signal Processing, 2012.
 
 ## Problem statement
 
@@ -536,16 +644,45 @@ The design separates five layers even when an implementation combines them:
 5. **Sequencing:** an ordering that serves smoothness, transition quality, a
    destination, or another requested trajectory.
 
+The same versioned analysis can support several task-conditioned views without
+pretending that they share one universally correct distance. Confidence,
+invariance, schema, and provenance constrain every view:
+
+```mermaid
+flowchart LR
+    A[(Versioned analysis products<br/>baseline, globals, frames,<br/>structure, anchors, embeddings)]
+    M[Cross-cutting metadata<br/>schema, provenance,<br/>confidence, invariance]
+
+    A --> W[Whole-track view<br/>global similarity]
+    A --> C[Context or group view<br/>session and multi-seed fit]
+    A --> B[Directional boundary view<br/>outro-to-intro compatibility]
+    M -. constrains .-> W
+    M -. constrains .-> C
+    M -. constrains .-> B
+
+    P[(Compatible personal metric)] -. optional refinement .-> W
+    P -. optional refinement .-> C
+
+    W --> R[Relevance retrieval]
+    C --> R
+    R --> D[Diversity and exploration policy]
+    D --> S{Sequencing task?}
+    S -->|No| O[Final selection]
+    S -->|Transition-aware| T[Directional transition reranking]
+    B --> T
+    T --> O
+```
+
 ## Proposed architecture
 
 ### High-level flow
 
 ```mermaid
 flowchart LR
-    A[Audio library] --> BRS[bliss-rs extraction APIs\nbaseline and optional structured products]
+    A[Audio library] --> BRS[bliss-rs extraction APIs\nbaseline and optional analysis products]
     BRS --> BA[library analysis orchestration\nbliss-analyser or companion]
     BA --> DB[(bliss.db\nwhole-track features)]
-    BA --> EDB[(versioned enhanced sidecar\ndescriptors, frames, structure, anchors)]
+    BA --> EDB[(versioned enhanced sidecar\ndescriptors, temporal products, embeddings)]
 
     LMS[lms-blissmixer] -->|seeds and request| MX[chrober/bliss-mixer fork]
     LMS -->|explicit and weak feedback| FB[(preference observations)]
@@ -577,8 +714,10 @@ Responsibilities:
 - preserve the current Version 2 `Analysis` result and cost;
 - expose reusable spectral, loudness, onset, tempo, chroma, tonal, and bass
   measurements without requiring consumers to duplicate decoding or DSP;
-- provide optional structured products such as global descriptor sets, frame
-  sequences, structure, anchors, and confidence;
+- provide optional analysis products such as global descriptor sets, aligned
+  or typed frame series, structure, anchors, and model-identified embeddings;
+- attach cross-cutting schema, provenance, confidence, and invariance metadata
+  to those products;
 - make requested products and their configuration explicit;
 - version representation schemas and support deterministic serialization;
 - keep player-specific persistence, retrieval, diversity, and sequencing out
@@ -599,11 +738,12 @@ ownership remain open.
 Responsibilities:
 
 - find tracks that have Bliss data but no current enhanced analysis;
-- request configured, versioned structured products from `bliss-rs`;
+- request configured, versioned analysis products from `bliss-rs`;
 - run application-level experimental derivations that are not yet suitable for
   a stable library API;
-- persist global descriptors, frames, structure, segments, anchors, and
-  confidence in application-owned metadata;
+- persist global descriptors, frame series, structure, segments, anchors,
+  optional embeddings, and their cross-cutting metadata in application-owned
+  storage;
 - attach validity and confidence estimates where a measurement can be
   ambiguous or unstable;
 - update metadata atomically and report failures without damaging existing
@@ -671,18 +811,19 @@ the surrounding analyzer/mixer ecosystem.
 
 ### Flat and structured analysis boundary
 
-The agreed representation model is:
+The current proposed representation model is:
 
 ```text
 Version 2 Analysis
   stable 23-feature flat baseline
 
-Structured bliss-rs analysis
-  optional experimental global descriptors
-  optional frame sequences
-  optional structure and segments
-  optional intro/outro anchors
-  confidence and explicit schema identity
+Parallel bliss-rs analysis products
+  optional schema-defined global descriptors
+  optional aligned or typed frame series
+  optional structure analysis and segments
+  optional configured intro/outro anchors
+  optional model-identified learned embeddings
+  cross-cutting schema, provenance, confidence, and invariance metadata
 
 Possible Version 3 Analysis
   only validated scalar summaries
@@ -690,7 +831,7 @@ Possible Version 3 Analysis
   does not absorb variable-length structured products
 ```
 
-Structured products are requested explicitly so a consumer that needs only the
+Optional products are requested explicitly so a consumer that needs only the
 baseline does not pay for dense temporal analysis. Detailed Rust API and schema
 identity design belongs to the companion document.
 
@@ -727,9 +868,10 @@ the audio again.
 
 ### Temporal windows and segmentation
 
-Windowed analysis is the common foundation for structural variance,
-segmentation, and transition anchors. The analyzer may first compute a sequence
-of short-window vectors, then derive several representations:
+Windowed temporal evidence is a common foundation for structural variance,
+segmentation, and transition anchors. Depending on the descriptor families, the
+analyzer may retain one aligned sequence or several typed series at their native
+cadences, then derive several representations:
 
 - robust whole-track statistics beyond a single mean;
 - a novelty curve or change-point candidates;
@@ -739,9 +881,11 @@ of short-window vectors, then derive several representations:
 
 Fixed windows are simpler and reproducible; content-aware segmentation may
 better represent musical sections but adds algorithmic and schema complexity.
-The first prototype should preserve the window sequence long enough to compare
+The first prototype should preserve the source series long enough to compare
 both approaches instead of committing immediately to K-means or a particular
-segmentation algorithm.
+segmentation algorithm. Every series must declare its cadence and whether it is
+native or resampled; alignment and resampling policy are part of representation
+identity.
 
 Useful intermediate forms include a self-similarity matrix, novelty curve, and
 change-point confidence. They permit later comparison of robust statistics,
@@ -897,10 +1041,12 @@ the database-owning analyzer:
 ```text
 representation_schema
   schema_id                  primary representation identity
-  representation_kind       global, frame series, segment, intro, or outro
+  representation_kind       global, frame series, segment, anchor, or embedding
   feature_manifest           names, units, ordering, invariance, confidence
   normalization_id
   configuration_id           window, hop, silence, and derivation policy
+  model_provenance           nullable model, input, objective, augmentation,
+                             and pooling identity
   encoding
 
 enhanced_track_analysis
@@ -922,12 +1068,14 @@ track_vector
 
 temporal_series
   track_path
-  series_kind
+  series_kind                aligned or descriptor-family-specific series
   schema_id
-  window_policy
+  cadence_policy             window/hop or native measurement cadence
+  alignment_policy           native or declared resampling policy
   frame_count
   feature_count
   start_time
+  end_time
   feature_values             shaped dense series, normally one BLOB
   feature_confidence         optional shaped confidence data
 
@@ -949,6 +1097,15 @@ anchor
   end_time
   feature_vector
   feature_confidence
+
+embedding
+  track_path
+  schema_id
+  embedding_level            frame, segment, or whole track
+  model_id                   immutable model/artifact identity
+  pooling_id                 nullable, required for pooled representations
+  shape
+  feature_values             model-identified shaped BLOB
 ```
 
 The relationships are easier to see as a conceptual entity model. It shows
@@ -960,11 +1117,13 @@ erDiagram
     REPRESENTATION_SCHEMA ||--o{ TEMPORAL_SERIES : defines
     REPRESENTATION_SCHEMA ||--o{ SEGMENT : defines
     REPRESENTATION_SCHEMA ||--o{ ANCHOR : defines
+    REPRESENTATION_SCHEMA ||--o{ EMBEDDING : defines
 
     ENHANCED_TRACK_ANALYSIS ||--o{ TRACK_VECTOR : owns
     ENHANCED_TRACK_ANALYSIS ||--o{ TEMPORAL_SERIES : owns
     ENHANCED_TRACK_ANALYSIS ||--o{ SEGMENT : owns
     ENHANCED_TRACK_ANALYSIS ||--o{ ANCHOR : owns
+    ENHANCED_TRACK_ANALYSIS ||--o{ EMBEDDING : owns
 
     REPRESENTATION_SCHEMA {
         string schema_id PK
@@ -972,6 +1131,7 @@ erDiagram
         json feature_manifest
         string normalization_id
         string configuration_id
+        json model_provenance
         string encoding
     }
 
@@ -996,8 +1156,12 @@ erDiagram
         string track_path FK
         string schema_id FK
         string series_kind
+        string cadence_policy
+        string alignment_policy
         int frame_count
         int feature_count
+        float start_time
+        float end_time
         blob feature_values
         blob feature_confidence
     }
@@ -1021,13 +1185,26 @@ erDiagram
         blob feature_vector
         blob feature_confidence
     }
+
+    EMBEDDING {
+        string track_path FK
+        string schema_id FK
+        string embedding_level
+        string model_id
+        string pooling_id
+        string shape
+        blob feature_values
+    }
 ```
 
 Dense frame data should use one shaped numeric BLOB per track and series rather
-than one SQL row per feature value. Segments remain individual rows because
-their boundaries and vectors are independently meaningful. Anchors remain small
-hot runtime rows. A self-similarity matrix should not be persisted by default;
-it can be regenerated offline from retained frames.
+than one SQL row per feature value. Separate typed series may therefore occupy
+separate rows without being forced onto a false common cadence. Segments remain
+individual rows because their boundaries and vectors are independently
+meaningful. Anchors remain small hot runtime rows. Embeddings use shaped BLOBs
+and are accepted only with compatible model and pooling identity. A
+self-similarity matrix should not be persisted by default; it can be regenerated
+offline from retained frames.
 
 Applications should distinguish:
 
@@ -1189,7 +1366,7 @@ A group must not, however, be assumed to have one meaningful centre. A playlist
 or listening session can be deliberately multimodal, and even an album can
 contain outliers. Early work on acoustic recommendation from song sets found
 that minimum and median member distances outperformed a combined set model and
-mean distance for its album-completion task [[M4]](#m4). That result is not a
+mean distance for its album-completion task [[4]](#m4). That result is not a
 universal aggregation rule, but it makes a centroid-only design scientifically
 unjustified.
 
@@ -1214,7 +1391,7 @@ profile-only, and fused results, with regularization for small groups. User-made
 moods or accepted/rejected tracks may eventually provide safer behavioral
 context than assuming every artist or album is homogeneous. Research combining
 acoustic evidence with cultural or situational context supports testing such
-fusion [[M16]](#m16) [[M17]](#m17), but not collapsing context into an intrinsic
+fusion [[16]](#m16) [[17]](#m17), but not collapsing context into an intrinsic
 audio descriptor.
 
 ### Diversity and exploration policy
@@ -1229,11 +1406,11 @@ Candidate prototype policies include:
   already selected tracks;
 - cluster coverage or round-robin selection across relevant neighborhoods;
 - relevance-aware submodular coverage, which has direct music-recommendation
-  evidence [[M7]](#m7);
+  evidence [[7]](#m7);
 - a determinantal-point-process-like objective if a simpler method proves
   insufficient; DPPs provide a principled relevance/diversity model, but the
   general method is not itself evidence of benefit for this library
-  [[M8]](#m8).
+  [[8]](#m8).
 
 The policy should expose one conceptual variety control and preserve hard
 filters. Its evaluation should measure relevance and diversity separately.
@@ -1241,7 +1418,7 @@ Ordering then operates on the selected set or on a sufficiently broad frontier;
 it should not silently compensate for a relevance model that returned near
 duplicates. Diversity is order-independent, whereas playlist coherence depends
 on local adjacency relative to the variation of the full sequence
-[[M1]](#m1). Objective feature dispersion, local flow, and perceived variety
+[[1]](#m1). Objective feature dispersion, local flow, and perceived variety
 must therefore be reported separately; maximizing any one of them can make a
 playlist worse on the others.
 
@@ -1341,6 +1518,43 @@ prerequisite for good default mixing.
 
 #### Active and progressive learning
 
+The personalization lifecycle keeps observation semantics, model capacity,
+validation, compatibility, and runtime influence separate. A weak signal enters
+the learner only after its context is retained; more evidence increases model
+capacity only when held-out results justify it:
+
+```mermaid
+flowchart LR
+    CTX[Library and playback context] --> Q[Active query selection]
+    Q --> EX[Explicit response]
+
+    WF[Typed weak feedback<br/>skip, retention, reorder,<br/>acceptance or rejection]
+    WF --> WG[Semantics, context, consent,<br/>exposure, confidence, decay]
+
+    EX -->|Valid triplet judgment| OBS[(Versioned preference observations)]
+    EX -->|Unsure or skip| NOP[Question-quality evidence<br/>not a preference label]
+    NOP -. informs selection .-> Q
+    WG --> OBS
+    OBS --> SPLIT[Training and held-out evidence]
+    SPLIT --> E{Evidence level and<br/>held-out benefit}
+
+    PRIOR[Compatible baseline or<br/>population-aware prior]
+    E -->|None or no benefit| PRIOR
+    E -->|Small| FAMILY[Regularized family weights]
+    E -->|Moderate| DIAG[Diagonal feature residual]
+    E -->|Large and validated| FULL[Low-rank or full interactions]
+
+    FAMILY --> ART[(Versioned personal metric<br/>schema and normalization identity)]
+    DIAG --> ART
+    FULL --> ART
+    ART --> COMP{Compatible with the<br/>active representation?}
+    COMP -->|No| PRIOR
+    COMP -->|Yes| BLEND[Scale-normalized,<br/>confidence-limited blend]
+    PRIOR --> BLEND
+    BLEND -. uncertainty and disagreement .-> Q
+    BLEND --> MIX[Runtime similarity scoring]
+```
+
 The highest-priority learner experiment is active query selection. Rather than
 uniform random triplets, choose questions expected to reduce uncertainty:
 
@@ -1353,9 +1567,9 @@ uniform random triplets, choose questions expected to reduce uncertainty:
 - allow `unsure` or `skip` without treating it as a preference.
 
 Relative comparisons are an established basis for distance-metric learning
-[[M9]](#m9). Information-gain selection has reduced the number of human
-comparisons needed for similarity learning [[M10]](#m10), including work aimed
-specifically at active feature-space metric learning [[M11]](#m11). This
+[[9]](#m9). Information-gain selection has reduced the number of human
+comparisons needed for similarity learning [[10]](#m10), including work aimed
+specifically at active feature-space metric learning [[11]](#m11). This
 supports the direction of active selection, but not a particular query heuristic
 or evidence threshold in this implementation. Uniform-random selection remains
 the required experimental control.
@@ -1392,9 +1606,9 @@ decay, and preferably repeated evidence. A contextual micro-question such as
 directional evidence with less effort than a separate long survey.
 
 Playlist co-occurrence can provide useful weak supervision for music similarity
-[[M12]](#m12), but it represents collective playlist practice rather than one
+[[12]](#m12), but it represents collective playlist practice rather than one
 listener's intrinsic similarity judgment. Skip timing is also correlated with
-musical section boundaries [[M13]](#m13), so a skip can encode structure,
+musical section boundaries [[13]](#m13), so a skip can encode structure,
 position, or interruption rather than dislike. Weak signals must be evaluated
 by type and context instead of being pooled into one implicit preference label.
 
@@ -1426,6 +1640,34 @@ It consumes anchor and boundary descriptors from the broader enhanced-analysis
 model, but it is not required for experiments that improve general song
 similarity.
 
+The reranker operates only after global retrieval and existing filtering. It
+uses the actual playback boundary, preserves candidates with missing metadata,
+and combines scores only after normalizing their different domains:
+
+```mermaid
+flowchart LR
+    G[Selected global strategy] --> W[Wider globally scored pool]
+    W --> F[Existing hard and<br/>fallback filters]
+    F --> P[Eligible candidates]
+
+    Q[Queue and player state] --> B[Actual boundary track]
+    X[(Enhanced-analysis sidecar)] --> A[Source outro and<br/>candidate intro anchors]
+    B --> A
+
+    P --> C{Compatible anchor pair<br/>and sufficient confidence?}
+    A --> C
+    C -->|Yes| TD[Transition distance and<br/>independently scaled boundary terms]
+    C -->|No| FB[Configured fallback<br/>global-only candidate or<br/>request-level reranking disable]
+
+    P --> GN[Normalize global score<br/>within the candidate pool]
+    TD --> TN[Normalize transition and<br/>boundary terms independently]
+    GN --> FS[Weighted or calibrated<br/>score fusion]
+    GN --> FB
+    TN --> FS
+    FS --> R[Final ranking and truncation]
+    FB --> R
+```
+
 #### Candidate generation
 
 The selected existing algorithm runs first. It must retain more candidates than
@@ -1433,8 +1675,8 @@ the final requested count so the transition layer has meaningful choices.
 
 Published systems commonly separate selection or a fixed input set from later
 sequence optimization. Bittner et al. reorder a preselected playlist and then
-optimize transition regions [[M2]](#m2); Flexer et al. exclude tracks far from
-both path endpoints before constructing an ordered path [[M3]](#m3). These
+optimize transition regions [[2]](#m2); Flexer et al. exclude tracks far from
+both path endpoints before constructing an ordered path [[3]](#m3). These
 results support global gating before local optimization, but do not determine
 the correct pool size or filter boundary for this implementation.
 
@@ -1467,7 +1709,7 @@ Additional penalties can later represent loudness jumps or incompatible
 boundary shapes, but each term must be normalized independently. Prior
 transition work uses section boundaries, downbeats, beat-synchronous timbre,
 chroma, loudness, and vocal presence rather than assuming that one arbitrary
-fixed window contains all relevant evidence [[M2]](#m2). The fixed
+fixed window contains all relevant evidence [[2]](#m2). The fixed
 outro-to-intro vector is therefore a deliberately simple baseline. It must be
 compared with structure-aligned regions and with feature-specific confidence;
 the published work does not validate the exact distance or weights proposed
@@ -1762,6 +2004,12 @@ complex transition model from receiving credit for one dominant feature.
 
 ## Delivery phases
 
+These are downstream experimentation and integration phases, not lockstep
+milestones for the companion `bliss-rs` roadmap. An application-level analyzer
+may derive experimental summaries or anchors from a frame API before equivalent
+stable library products exist; reusable extraction and final representation
+contracts still follow the ownership boundary above.
+
 ### Phase 0: discovery
 
 - inspect the exact `bliss.db` schema and lifecycle;
@@ -1836,8 +2084,9 @@ complex transition model from receiving credit for one dominant feature.
 - adopt only improvements that survive blinded comparison and deployment-cost
   review;
 - decide which proven scalar descriptors meet the companion document's
-  promotion criteria for a possible `FeaturesVersion::Version3`; structured
-  frames, segments, anchors, and confidence remain parallel products.
+  promotion criteria for a possible `FeaturesVersion::Version3`; frames,
+  structure, anchors, embeddings, and their cross-cutting metadata remain
+  parallel products.
 
 ## Risks and mitigations
 
@@ -1926,117 +2175,7 @@ duplicated here.
 24. Which local-versus-global coherence measure predicts listener-rated flow
     without rewarding homogeneous or boring playlists?
 
-## References and source evidence
-
-### Scientific bibliography
-
-<a id="m1"></a>**[M1]** H. Schweiger, E. Parada-Cabaleiro, and M. Schedl,
-"[The Impact of Playlist Characteristics on Coherence in User-Curated Music
-Playlists](https://link.springer.com/article/10.1140/epjds/s13688-025-00531-3),"
-*EPJ Data Science*, vol. 14, article 24, 2025.
-
-<a id="m2"></a>**[M2]** R. M. Bittner, M. Gu, G. Hernandez,
-E. J. Humphrey, T. Jehan, P. H. McCurry, and N. Montecchio,
-"[Automatic Playlist Sequencing and
-Transitions](https://archives.ismir.net/ismir2017/paper/000086.pdf)," ISMIR,
-2017.
-
-<a id="m3"></a>**[M3]** A. Flexer, D. Schnitzer, M. Gasser, and G. Widmer,
-"[Playlist Generation Using Start and End
-Songs](https://www.cp.jku.at/research/papers/Flexer_etal_ISMIR_2008.pdf),"
-ISMIR, 2008.
-
-<a id="m4"></a>**[M4]** B. Logan,
-"[Music Recommendation from Song
-Sets](https://shiftleft.com/mirrors/www.hpl.hp.com/techreports/2004/HPL-2004-148.pdf),"
-ISMIR, 2004; HP Laboratories Technical Report HPL-2004-148.
-
-<a id="m5"></a>**[M5]** J. Lee, N. J. Bryan, J. Salamon, Z. Jin, and J. Nam,
-"[Disentangled Multidimensional Metric Learning for Music
-Similarity](https://www.justinsalamon.com/uploads/4/3/9/4/4394963/lee_disentangledmusicsim_icassp2020.pdf),"
-ICASSP, 2020.
-
-<a id="m6"></a>**[M6]** A. Flexer, T. Lallai, and K. Rasi,
-"[On Evaluation of Inter- and Intra-Rater Agreement in Music
-Recommendation](https://doi.org/10.5334/tismir.107)," *Transactions of the
-International Society for Music Information Retrieval*, vol. 4, no. 1,
-pp. 182-194, 2021.
-
-<a id="m7"></a>**[M7]** H. Nassif, K. O. Cansizlar, M. Goodman, and
-S. V. N. Vishwanathan,
-"[Diversifying Music
-Recommendations](https://pages.cs.wisc.edu/~hous21/papers/ICMLW16.pdf),"
-Machine Learning for Music Discovery Workshop at ICML, 2016.
-
-<a id="m8"></a>**[M8]** A. Kulesza and B. Taskar,
-"[Determinantal Point Processes for Machine
-Learning](https://www.nowpublishers.com/article/Details/MAL-044),"
-*Foundations and Trends in Machine Learning*, vol. 5, nos. 2-3,
-pp. 123-286, 2012.
-
-<a id="m9"></a>**[M9]** M. Schultz and T. Joachims,
-"[Learning a Distance Metric from Relative
-Comparisons](https://papers.nips.cc/paper_files/paper/2003/hash/d3b1fb02964aa64e257f9f26a31f72cf-Abstract.html),"
-NeurIPS, 2003.
-
-<a id="m10"></a>**[M10]** O. Tamuz, C. Liu, S. Belongie, O. Shamir, and
-A. T. Kalai,
-"[Adaptively Learning the Crowd
-Kernel](https://icml.cc/2011/papers/395_icmlpaper.pdf)," ICML, 2011.
-
-<a id="m11"></a>**[M11]** S. Xiong, R. Rosales, Y. Pei, and X. Z. Fern,
-"[Active Metric Learning from Relative
-Comparisons](https://arxiv.org/abs/1409.4155)," arXiv:1409.4155, 2014.
-
-<a id="m12"></a>**[M12]** P. Alonso-Jimenez, X. Favory, H. Foroughmand,
-G. Bourdalas, X. Serra, T. Lidy, and D. Bogdanov,
-"[Pre-Training Strategies Using Contrastive Learning and Playlist Information
-for Music Classification and Similarity](https://arxiv.org/abs/2304.12257),"
-ICASSP, 2023, DOI 10.1109/ICASSP49357.2023.10095058.
-
-<a id="m13"></a>**[M13]** N. Montecchio, P. Roy, and F. Pachet,
-"[The Skipping Behavior of Users of Music Streaming Services and Its Relation
-to Musical
-Structure](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0239418),"
-*PLOS ONE*, vol. 15, no. 9, e0239418, 2020.
-
-<a id="m14"></a>**[M14]** R. Ragno, C. J. C. Burges, and C. Herley,
-"[Inferring Similarity Between Music Objects with Application to Playlist
-Generation](https://www.microsoft.com/en-us/research/publication/inferring-similarity-between-music-objects-with-application-to-playlist-generation/),"
-ACM MIR, 2005.
-
-<a id="m15"></a>**[M15]** F. Maillet, D. Eck, G. Desjardins, and P. Lamere,
-"[Steerable Playlist Generation by Learning Song Similarity from Radio Station
-Playlists](https://ismir2009.ismir.net/proceedings/OS4-2.pdf)," ISMIR, 2009.
-
-<a id="m16"></a>**[M16]** E. Zangerle, M. Pichl, and M. Schedl,
-"[User Models for Culture-Aware Music Recommendation: Fusing Acoustic and
-Cultural Cues](https://transactions.ismir.net/articles/10.5334/tismir.37),"
-*Transactions of the International Society for Music Information Retrieval*,
-vol. 3, no. 1, 2020.
-
-<a id="m17"></a>**[M17]** M. Pichl and E. Zangerle,
-"[User Models for Multi-Context-Aware Music
-Recommendation](https://link.springer.com/article/10.1007/s11042-020-09890-7),"
-*Multimedia Tools and Applications*, vol. 80, pp. 22509-22531, 2021.
-
-<a id="m18"></a>**[M18]** E. Liebman, P. Khandelwal,
-M. Saar-Tsechansky, and P. Stone,
-"[Designing Better Playlists with Monte Carlo Tree
-Search](https://ojs.aaai.org/index.php/AAAI/article/view/19100)," AAAI,
-vol. 31, no. 2, pp. 4715-4720, 2017.
-
-<a id="m19"></a>**[M19]** J. G. Carbonell and J. Goldstein,
-"[The Use of MMR, Diversity-Based Reranking for Reordering Documents and
-Producing Summaries](https://doi.org/10.1145/290941.291025)," SIGIR,
-pp. 335-336, 1998.
-
-<a id="m20"></a>**[M20]** L. van der Maaten and K. Q. Weinberger,
-"[Stochastic Triplet
-Embedding](https://doi.org/10.1109/MLSP.2012.6349720)," IEEE International
-Workshop on Machine Learning for Signal Processing, 2012.
-
-### Historical and implementation evidence
+## Historical and implementation evidence
 
 - Bliss [`Analysis`](https://docs.rs/bliss-audio/latest/bliss_audio/struct.Analysis.html)
   and [`AnalysisIndex`](https://docs.rs/bliss-audio/latest/bliss_audio/enum.AnalysisIndex.html)
