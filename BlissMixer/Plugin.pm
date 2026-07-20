@@ -486,6 +486,7 @@ sub _cliCommand {
             if ($count>0 && $count<$numTracks) {
                 $numTracks = $count;
             }
+            _logInteractiveRequest($request, $cmd, $numTracks, \@seedsToUse);
             my $jsonData = _getMixData(\@seedsToUse, undef, $numTracks, 1, $prefs->get('filter_genres') || 0);
 
             Slim::Player::Playlist::fischer_yates_shuffle(\@seedsToUse);
@@ -497,6 +498,7 @@ sub _cliCommand {
             if ($count>0 && $count<$numTracks) {
                 $numTracks = $count;
             }
+            _logInteractiveRequest($request, $cmd, $numTracks, \@seedsToUse);
             my $jsonData = _getListData(@seedsToUse[0], $numTracks, $prefs->get('filter_genres') || 0, $request->getParam('byArtist') || 0);
             if (0==_callApi($request, $jsonData, $numTracks, undef, "list", 0)) {
                 $request->setStatusProcessing();
@@ -504,7 +506,78 @@ sub _cliCommand {
         }
         return;
     }
+    my $action = _interactiveActionName($request, $cmd);
+    $log->warn("$action request has no usable seed tracks");
     $request->setStatusBadDispatch();
+}
+
+sub _interactiveActionName {
+    my ($request, $api) = @_;
+
+    if ($api eq 'list') {
+        return ($request->getParam('byArtist') || 0)
+            ? 'Similar tracks by artist'
+            : 'Similar tracks';
+    }
+
+    return 'Create bliss mix';
+}
+
+sub _logInteractiveRequest {
+    my ($request, $cmd, $numTracks, $seeds) = @_;
+
+    return unless main::INFOLOG;
+
+    my $action = _interactiveActionName($request, $cmd);
+    $log->info("User action: $action (requesting up to $numTracks tracks)");
+
+    if ($cmd eq 'list') {
+        my $scope = ($request->getParam('byArtist') || 0)
+            ? 'same artist only'
+            : 'all artists';
+        $log->info("Similarity strategy: static weights ($scope)");
+    } else {
+        my $strategy;
+        my $singleSeedLearnedOverride = 0;
+        if ($prefs->get('use_adaptive_weights')) {
+            my $blend = int($prefs->get('learned_blend') // 50);
+            my $matrixFile = Plugins::BlissMixer::Survey::matrixPath();
+            my $hasMatrix = $matrixFile && -e $matrixFile;
+            my $blendDesc = !$hasMatrix || $blend == 0 ? 'pure variance-based'
+                          : $blend == 100              ? 'pure learned matrix'
+                          :                              "${blend}% learned matrix";
+            $strategy = "adaptive weighting ($blendDesc)";
+            $singleSeedLearnedOverride = $hasMatrix && scalar(@$seeds) == 1 && $blend < 100;
+        } else {
+            $strategy = ($prefs->get('use_forest') || 0) ? 'extended isolation forest' : 'static weights';
+        }
+        $log->info("Mixing strategy: $strategy");
+        $log->info("Single-seed override: using pure learned matrix.") if $singleSeedLearnedOverride;
+    }
+
+    if ($cmd eq 'list' || !($prefs->get('use_adaptive_weights') || $prefs->get('use_forest'))) {
+        $log->info(sprintf("Configured weights: Tempo=%d  Timbre=%d  Loudness=%d  Chroma=%d",
+            int($prefs->get('weight_tempo') || 4), int($prefs->get('weight_timbre') || 30),
+            int($prefs->get('weight_loudness') || 9), int($prefs->get('weight_chroma') || 57)));
+    }
+
+    my $minDuration = int($prefs->get('min_duration') || 0);
+    my $maxDuration = int($prefs->get('max_duration') || 0);
+    my $maxBpmDiff = int($prefs->get('max_bpm_diff') || 0);
+    my $duration = $minDuration && $maxDuration ? "$minDuration-$maxDuration seconds"
+                 : $minDuration                 ? "at least $minDuration seconds"
+                 : $maxDuration                 ? "at most $maxDuration seconds"
+                 :                                'off';
+    $log->info(sprintf("Filters: genre=%s, duration=%s, max BPM difference=%s",
+        ($prefs->get('filter_genres') || 0) ? 'on' : 'off',
+        $duration,
+        $maxBpmDiff ? $maxBpmDiff : 'off'));
+
+    # At debug level the existing path-based seed messages provide the same
+    # information in a more diagnostic form.
+    unless ($log->is_debug) {
+        $log->info("Seed: " . $_->artistName . " - " . $_->title) for @$seeds;
+    }
 }
 
 sub _confirmMixerStarted {
@@ -747,7 +820,8 @@ sub _callApi {
                 return 0;
             }
         }
-        main::DEBUGLOG && $log->debug("Failed to start mixer");
+        my $action = _interactiveActionName($request, $api);
+        $log->warn("$action request failed: bliss-mixer is not available");
         $request->setStatusDone();
         $lastMixerStart = 0;
         return 1;
@@ -762,10 +836,12 @@ sub _callApi {
     $http->timeout($prefs->get('timeout') || 30);
 
     main::DEBUGLOG && $log->debug("Call $url");
+    my $requestStarted = Time::HiRes::time();
     $request->setStatusProcessing();
     Slim::Networking::SimpleAsyncHTTP->new(
         sub {
             my $response = shift;
+            my $responseReceived = Time::HiRes::time();
             main::DEBUGLOG && $log->debug("Received API response: " . ($response->headers->header('X-Bliss-Debug') || $response->content));
 
             my @songs = split(/\n/, $response->content);
@@ -779,6 +855,7 @@ sub _callApi {
             my $useContextMenu = $request->getParam('useContextMenu');
             my @usableTracks = ();
             my @ids          = ();
+            my $unresolved   = 0;
             my $mediaDirs    = Slim::Utils::Misc::getMediaDirs('audio');
 
             # TODO: Add more?
@@ -796,7 +873,18 @@ sub _callApi {
                     if (scalar(@ids) >= $maxTracks) {
                         last;
                     }
+                } elsif (!blessed $trackObj) {
+                    $unresolved++;
+                    $log->error("API returned a song that LMS could not resolve: $track");
                 }
+            }
+
+            if (main::INFOLOG) {
+                my $action = _interactiveActionName($request, $api);
+                $log->info(sprintf("%s results: %d returned by bliss-mixer, %d selected for LMS, %d unresolved",
+                    $action, $count, scalar(@usableTracks), $unresolved));
+                $log->info("Selected tracks (" . scalar(@usableTracks) . "):");
+                $log->info("  " . $_->artistName . " - " . $_->title) for @usableTracks;
             }
 
             if ($menuMode) {
@@ -886,13 +974,21 @@ sub _callApi {
                 $chunkCount++;
             }
             main::DEBUGLOG && $log->debug("Num tracks to use:" . ($chunkCount - 1)); # Remove 'Play this mix' from count
+            if (main::DEBUGLOG) {
+                my $finished = Time::HiRes::time();
+                $log->debug(sprintf("Interactive request timing: HTTP=%dms, result processing=%dms, total=%dms",
+                    int(($responseReceived - $requestStarted) * 1000),
+                    int(($finished - $responseReceived) * 1000),
+                    int(($finished - $requestStarted) * 1000)));
+            }
             $request->addResult('count', $chunkCount);
             $request->setStatusDone();
         },
         sub {
             my $response = shift;
             my $error  = $response->error;
-            main::DEBUGLOG && $log->debug("Failed to fetch URL: $error");
+            my $action = _interactiveActionName($request, $api);
+            $log->warn("$action request failed: $error");
             $request->setStatusDone();
         }
     )->post($url, 'Timeout' => 30, 'Content-Type' => 'application/json;charset=utf-8', $jsonData);
